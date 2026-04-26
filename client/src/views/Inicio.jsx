@@ -54,15 +54,6 @@ const Inicio = () => {
                 >
                   Contacto
                 </button>
-                <button
-                  onClick={() => {
-                    navigate('/signup');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20"
-                >
-                  Sign Up
-                </button>
               </div>
             </div>
             
