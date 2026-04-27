@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useCart } from '../../context/CartContext.jsx';
 
 const Navbar = () => {
+  const { cartItems, toggleCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
@@ -77,11 +79,29 @@ const Navbar = () => {
         <div className="flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 text-[10px] font-black italic">
+              {/* Botón Carrito */}
+              <button 
+                onClick={toggleCart}
+                className={`relative p-2 rounded-xl transition-colors ${isAdmin ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-300 hover:bg-white/10'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {cartItems?.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-md">
+                    {cartItems.length}
+                  </span>
+                )}
+              </button>
+              <div 
+                className={`flex items-center gap-3 cursor-pointer group px-3 py-2 -ml-3 rounded-xl transition-colors ${isAdmin ? 'hover:bg-slate-50' : 'hover:bg-white/5'}`}
+                onClick={() => navigate('/perfil')}
+                title="Ir a mi perfil"
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 text-[10px] font-black italic group-hover:bg-blue-500/20 transition-colors">
                   {(user.username || user.nombre || 'U').charAt(0).toUpperCase()}
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${isAdmin ? 'text-slate-900' : 'text-white'}`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isAdmin ? 'text-slate-900 group-hover:text-blue-600' : 'text-white group-hover:text-blue-400'}`}>
                   {user.username || user.nombre || 'Usuario'}
                 </span>
               </div>

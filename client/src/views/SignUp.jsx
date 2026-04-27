@@ -2,19 +2,46 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SignUp = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert('Las contraseñas no coinciden');
       return;
     }
-    console.log('Intento de registro:', { email, password });
-    navigate('/');
+    
+    try {
+      const res = await fetch('http://localhost:5000/api/usuarios/registro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          rol_id: 5, // Asumiendo rol 5 para cliente
+          cedula_rif: '',
+          nombre: username, // Usar username como nombre temporal
+          apellido: '',
+          telefono: '',
+          email: '',
+          direccion: ''
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert('Usuario registrado exitosamente');
+        navigate('/login');
+      } else {
+        alert(data.error || 'Error al registrar el usuario');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión al servidor');
+    }
   };
 
   return (
@@ -62,15 +89,15 @@ const SignUp = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-black mb-2 ml-1">
-                Correo Electrónico
+                Usuario
               </label>
               <input
-                type="email"
+                type="text"
                 required
                 className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all"
-                placeholder="usuario@egyven.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Nombre de usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
 

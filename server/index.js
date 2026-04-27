@@ -20,10 +20,12 @@ app.use('/src/assets/images', express.static(path.join(__dirname, 'src/assets/im
 // Importar Rutas
 const usuariosRoutes = require('./routes/usuarios');
 const productosRoutes = require('./routes/productos');
+const carritoRoutes = require('./routes/carrito');
 
 // Uso de Rutas
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/productos', productosRoutes);
+app.use('/api/carrito', carritoRoutes);
 
 // Ruta de prueba rápida
 app.get('/', (req, res) => {

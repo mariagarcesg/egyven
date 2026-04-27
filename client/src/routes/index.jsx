@@ -7,6 +7,11 @@ import Inicio from '../views/Inicio.jsx';
 import Nosotros from '../views/Nosotros.jsx';
 import Login from '../views/Login.jsx';
 import SignUp from '../views/SignUp.jsx';
+import Perfil from '../views/Perfil.jsx';
+
+// Context
+import { CartProvider } from '../context/CartContext.jsx';
+import CartModal from '../components/cart/CartModal.jsx';
 
 // Vistas Administrativas
 import Principal from '../views/admin/Principal.jsx';
@@ -25,7 +30,8 @@ const PrivateRoute = ({ children, allowedRoles }) => {
 
 const AppRoutes = () => {
   return (
-    <BrowserRouter>
+    <CartProvider>
+      <BrowserRouter>
       <Routes>
         {/* Rutas Públicas */}
         <Route path="/" element={<Inicio />} />
@@ -81,10 +87,22 @@ const AppRoutes = () => {
           }
         />
 
+        {/* Ruta para el perfil de usuario */}
+        <Route
+          path="/perfil"
+          element={
+            <PrivateRoute>
+              <Perfil />
+            </PrivateRoute>
+          }
+        />
+
         {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </BrowserRouter>
+      <CartModal />
+      </BrowserRouter>
+    </CartProvider>
   );
 };
 
