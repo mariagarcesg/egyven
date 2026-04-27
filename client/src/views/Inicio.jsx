@@ -180,7 +180,6 @@ const InfiniteCarousel = ({ images }) => {
 
 /* ── Inicio ──────────────────────────────────────────────────────── */
 const Inicio = () => {
-  // Inject glow styles once
   useEffect(() => {
     if (document.getElementById('glow-btn-styles')) return;
     const tag = document.createElement('style');
@@ -188,7 +187,18 @@ const Inicio = () => {
     tag.textContent = glowStyle;
     document.head.appendChild(tag);
   }, []);
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      if (user.rol_id === 1 || user.rol_id === 4) {
+        navigate('/principal');
+      }
+    }
+  }, [navigate]);
 
   const servicios = [
     { title: "Servicio Técnico", desc: "Reparación y mantenimiento especializado de hardware industrial.", icon: "🛠️" },

@@ -7,6 +7,7 @@ import Inicio from '../views/Inicio.jsx';
 import Nosotros from '../views/Nosotros.jsx';
 import Login from '../views/Login.jsx';
 import SignUp from '../views/SignUp.jsx';
+import Principal from '../views/Principal.jsx';
 
 const AppRoutes = () => {
   return (
@@ -22,6 +23,8 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         {/* Ruta SignUp */}
         <Route path="/signup" element={<SignUp />} />
+        {/* Ruta Panel Principal */}
+        <Route path="/principal" element={<Principal />} />
 
         {/* Si escriben cualquier otra cosa, redirigir al inicio */}
         <Route path="*" element={<Navigate to="/" />} />

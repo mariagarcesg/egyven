@@ -28,6 +28,8 @@ const Login = () => {
       // Redirección basada en rol
       if (user.rol_id === 5) {
         navigate('/catalogo');
+      } else if (user.rol_id === 1 || user.rol_id === 4) {
+        navigate('/principal');
       } else {
         navigate('/');
       }
