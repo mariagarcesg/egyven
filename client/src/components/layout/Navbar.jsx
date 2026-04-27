@@ -79,10 +79,10 @@ const Navbar = () => {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 text-[10px] font-black italic">
-                  {user.username.charAt(0).toUpperCase()}
+                  {(user.username || user.nombre || 'U').charAt(0).toUpperCase()}
                 </div>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${isAdmin ? 'text-slate-900' : 'text-white'}`}>
-                  {user.username}
+                  {user.username || user.nombre || 'Usuario'}
                 </span>
               </div>
               <button 
