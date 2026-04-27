@@ -33,15 +33,40 @@ exports.registrarUsuario = async (req, res) => {
     }
 };
 
-// Función para obtener todos los usuarios (para pruebas)
+// Función para inicio de sesión
+exports.login = async (req, res) => {
+    const { username, password } = req.body;
 
+    try {
+        const query = 'SELECT * FROM usuarios WHERE username = ? AND password = ?';
+        const [rows] = await db.query(query, [username, password]);
+
+        if (rows.length > 0) {
+            // Usuario encontrado
+            res.status(200).json({
+                message: 'Inicio de sesión exitoso',
+                usuario: {
+                    id: rows[0].id,
+                    username: rows[0].username,
+                    nombre: rows[0].nombre,
+                    rol_id: rows[0].rol_id
+                }
+            });
+        } else {
+            // Credenciales incorrectas
+            res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error en el servidor al intentar iniciar sesión' });
+    }
+};
+
+// Función para obtener todos los usuarios (para pruebas)
 exports.obtenerUsuarios = async (req, res) => {
     try {
         const [rows] = await db.query('SELECT id, username, nombre, apellido FROM usuarios');
-
-        // ESTO SE VERÁ EN TU TERMINAL (Node)
         console.log("Datos recuperados de MySQL:", rows);
-
         res.json(rows);
     } catch (error) {
         console.error("Error en la consulta:", error);

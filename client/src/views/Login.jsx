@@ -1,15 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Intento de login:', { email, password });
-    navigate('/');
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/usuarios/login', {
+        username,
+        password
+      });
+
+      console.log('Login exitoso:', response.data);
+      const user = response.data.usuario;
+      // Guardar información del usuario
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Redirección basada en rol
+      if (user.rol_id === 5) {
+        navigate('/catalogo');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      console.error('Error en login:', err);
+      setError(err.response?.data?.error || 'Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,18 +82,24 @@ const Login = () => {
             Ingresa tus credenciales para gestionar el inventario.
           </p>
 
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] uppercase font-bold tracking-widest p-4 rounded-xl mb-6 text-center">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-black mb-2 ml-1">
-                Correo Electrónico
+                Nombre de Usuario
               </label>
               <input
-                type="email"
+                type="text"
                 required
                 className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all"
-                placeholder="usuario@egyven.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Escribe tu usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
 
@@ -91,9 +124,15 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] mt-4"
+              disabled={loading}
+              className={`w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-3 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Iniciar Sesión
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Iniciando...
+                </>
+              ) : 'Iniciar Sesión'}
             </button>
           </form>
         </div>

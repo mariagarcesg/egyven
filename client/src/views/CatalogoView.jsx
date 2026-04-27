@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar.jsx';
 
 const CatalogoView = () => {
   const [activeCategory, setActiveCategory] = useState('Todos');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const categories = ['Todos', 'Periféricos', 'Componentes', 'Herramientas'];
 
@@ -67,15 +75,28 @@ const CatalogoView = () => {
                   Optimizado para flujos de trabajo intensivos y gestión de datos en tiempo real.
                 </p>
 
-                <button
-                  onClick={() => document.getElementById(`modal_producto_${i}`).showModal()}
-                  className="w-full py-4 bg-slate-900 hover:bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all border border-white/5 flex items-center justify-center gap-2 group/btn"
-                >
-                  Detalles Técnicos
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => document.getElementById(`modal_producto_${i}`).showModal()}
+                    className="flex-grow py-4 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all border border-white/5 flex items-center justify-center gap-2 group/btn"
+                  >
+                    Detalles
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+
+                  {user?.rol_id === 5 && (
+                    <button
+                      className="w-14 h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center group/cart"
+                      title="Agregar al carrito"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 group-hover/cart:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* MODAL SIN BORDE BLANCO */}

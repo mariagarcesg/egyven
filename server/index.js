@@ -25,10 +25,10 @@ app.get('/', (req, res) => {
 });
 
 // Puerto para probar la conexion
-/*const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`==========================================`);
     console.log(`Servidor EGYVEN corriendo en puerto ${PORT}`);
     console.log(`API disponible en: http://localhost:${PORT}/api/usuarios`);
     console.log(`==========================================`);
-});*/
+});
