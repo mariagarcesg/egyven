@@ -145,7 +145,7 @@ const InfiniteCarousel = ({ images }) => {
                 }}
               >
                 {/* show real asset number for clones too */}
-                Asset {idx === 0 ? images.length : idx === total - 1 ? 1 : idx}
+                {idx === 0 ? images.length : idx === total - 1 ? 1 : idx}
               </span>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginTop: '8px', fontStyle: 'italic' }}>
                 {img.label}

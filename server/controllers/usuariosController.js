@@ -73,3 +73,60 @@ exports.obtenerUsuarios = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// Función para obtener un usuario por ID
+exports.obtenerUsuarioPorId = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const query = 'SELECT id, username, password, rol_id, cedula_rif, nombre, apellido, telefono, email, direccion FROM usuarios WHERE id = ?';
+        const [rows] = await db.query(query, [id]);
+        
+        if (rows.length > 0) {
+            res.status(200).json(rows[0]);
+        } else {
+            res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener el usuario' });
+    }
+};
+
+// Función para actualizar el perfil de un usuario
+exports.actualizarUsuario = async (req, res) => {
+    const { id } = req.params;
+    const { username, password, cedula_rif, nombre, apellido, telefono, email, direccion } = req.body;
+    
+    try {
+        let query;
+        let params;
+        
+        // Si el password viene vacío, no lo actualizamos para mantener el anterior
+        if (password && password.trim() !== '') {
+            query = `
+                UPDATE usuarios 
+                SET username = ?, password = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?
+                WHERE id = ?
+            `;
+            params = [username, password, cedula_rif, nombre, apellido, telefono, email, direccion, id];
+        } else {
+            query = `
+                UPDATE usuarios 
+                SET username = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?
+                WHERE id = ?
+            `;
+            params = [username, cedula_rif, nombre, apellido, telefono, email, direccion, id];
+        }
+        
+        const [result] = await db.query(query, params);
+        
+        if (result.affectedRows > 0) {
+            res.status(200).json({ message: 'Perfil actualizado exitosamente' });
+        } else {
+            res.status(404).json({ error: 'Usuario no encontrado o sin cambios' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar el usuario: ' + error.message });
+    }
+};
