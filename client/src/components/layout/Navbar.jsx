@@ -17,8 +17,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
-    setUser(null);
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const isAdmin = user?.rol_id === 1 || user?.rol_id === 4;
@@ -54,6 +53,9 @@ const Navbar = () => {
           
           {!isAdmin && (
             <>
+              {user?.rol_id === 5 && (
+                <button onClick={() => navigate('/pedidos')} className={getLinkClass('/pedidos')}>Mis Pedidos</button>
+              )}
               <button onClick={() => navigate('/nosotros')} className={getLinkClass('/nosotros')}>Nosotros</button>
               <button
                 className="text-[10px] font-black uppercase tracking-widest text-white hover:text-blue-400"

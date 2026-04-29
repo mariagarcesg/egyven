@@ -27,11 +27,11 @@ const Login = () => {
       
       // Redirección basada en rol
       if (user.rol_id === 5) {
-        navigate('/catalogo');
+        window.location.href = '/catalogo';
       } else if (user.rol_id === 1 || user.rol_id === 4) {
-        navigate('/principal');
+        window.location.href = '/principal';
       } else {
-        navigate('/');
+        window.location.href = '/';
       }
     } catch (err) {
       console.error('Error en login:', err);

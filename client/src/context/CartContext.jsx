@@ -93,10 +93,33 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const checkoutOrder = async (total) => {
+    if (!user?.id || cartItems.length === 0) return { success: false };
+
+    try {
+      const res = await fetch('http://localhost:5000/api/ordenes/crear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario_id: user.id, total })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsCartOpen(false); // Cerramos el modal
+        await fetchCart(); // Refresca, dejándolo vacío
+        return { success: true };
+      } else {
+        return { success: false, code: data.error, message: data.message || data.error || 'Error al procesar la orden' };
+      }
+    } catch (error) {
+      console.error('Error in checkout:', error);
+      return { success: false, message: 'Error de conexión al procesar la orden' };
+    }
+  };
+
   const toggleCart = () => setIsCartOpen(!isCartOpen);
 
   return (
-    <CartContext.Provider value={{ cartItems, isCartOpen, loadingCart, addToCart, removeFromCart, updateQuantity, toggleCart, fetchCart }}>
+    <CartContext.Provider value={{ cartItems, isCartOpen, loadingCart, addToCart, removeFromCart, updateQuantity, checkoutOrder, toggleCart, fetchCart }}>
       {children}
     </CartContext.Provider>
   );

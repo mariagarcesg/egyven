@@ -19,6 +19,7 @@ import InventarioView from '../views/admin/Inventario.jsx';
 import FacturacionView from '../views/admin/Facturacion.jsx';
 import UsuariosView from '../views/admin/Usuarios.jsx';
 import ComparadorView from '../views/admin/Comparador.jsx';
+import PedidosView from '../views/Pedidos.jsx';
 
 // Componente simple para proteger rutas (Opcional pero recomendado)
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -93,6 +94,16 @@ const AppRoutes = () => {
           element={
             <PrivateRoute>
               <Perfil />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Ruta para pedidos del cliente */}
+        <Route
+          path="/pedidos"
+          element={
+            <PrivateRoute allowedRoles={[5]}>
+              <PedidosView />
             </PrivateRoute>
           }
         />
