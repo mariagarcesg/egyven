@@ -21,11 +21,32 @@ app.use('/src/assets/images', express.static(path.join(__dirname, 'src/assets/im
 const usuariosRoutes = require('./routes/usuarios');
 const productosRoutes = require('./routes/productos');
 const carritoRoutes = require('./routes/carrito');
+const ordenesRoutes = require('./routes/ordenes');
+const facturasRoutes = require('./routes/facturas');
 
 // Uso de Rutas
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/carrito', carritoRoutes);
+app.use('/api/ordenes', ordenesRoutes);
+app.use('/api/facturas', facturasRoutes);
+
+// DEBUG: listar rutas registradas (solo en entorno de desarrollo)
+if (process.env.NODE_ENV !== 'production') {
+    const routeList = [];
+    app._router.stack.forEach(mw => {
+        if (mw.route && mw.route.path) {
+            routeList.push({ path: mw.route.path, methods: mw.route.methods });
+        } else if (mw.name === 'router' && mw.handle && mw.handle.stack) {
+            mw.handle.stack.forEach(r => {
+                if (r.route) {
+                    routeList.push({ path: r.route.path, methods: r.route.methods });
+                }
+            });
+        }
+    });
+    console.log('Registered routes:', JSON.stringify(routeList, null, 2));
+}
 
 // Ruta de prueba rápida
 app.get('/', (req, res) => {

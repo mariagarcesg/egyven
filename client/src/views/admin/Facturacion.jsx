@@ -7,6 +7,12 @@ const FacturacionView = () => {
     const [facturas, setFacturas] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Estado para modal de detalles de factura
+    const [isFacturaModalOpen, setIsFacturaModalOpen] = useState(false);
+    const [selectedFactura, setSelectedFactura] = useState(null);
+    const [facturaDetalles, setFacturaDetalles] = useState([]);
+    const [loadingFacturaDetalles, setLoadingFacturaDetalles] = useState(false);
+
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedOrden, setSelectedOrden] = useState(null);
@@ -59,6 +65,22 @@ const FacturacionView = () => {
             console.error('Error al obtener detalles:', error);
         } finally {
             setLoadingDetalles(false);
+        }
+    };
+
+    const handleVerDetallesFactura = async (factura) => {
+        setSelectedFactura(factura);
+        setIsFacturaModalOpen(true);
+        setLoadingFacturaDetalles(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/facturas/${factura.id}/detalles`);
+            const data = await res.json();
+            setFacturaDetalles(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error al obtener detalles de factura:', error);
+            setFacturaDetalles([]);
+        } finally {
+            setLoadingFacturaDetalles(false);
         }
     };
 
@@ -283,18 +305,19 @@ const nuevaFactura = {
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha Venta</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Total</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pagado</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Acciones</th>
                                     </tr>
                                 </thead>
                             <tbody>
     {loading ? (
         <tr>
-            <td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">
+            <td colSpan="6" className="px-6 py-12 text-center text-slate-400 italic">
                 Cargando facturas...
             </td>
         </tr>
     ) : facturas.length === 0 ? (
         <tr>
-            <td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">
+            <td colSpan="6" className="px-6 py-12 text-center text-slate-400 italic">
                 No hay facturas generadas.
             </td>
         </tr>
@@ -320,6 +343,14 @@ const nuevaFactura = {
 
                 <td className="px-6 py-4 text-sm font-bold text-green-600">
                     ${Number(factura.total_pagado).toFixed(2)}
+                </td>
+                <td className="px-6 py-4 text-right">
+                    <button
+                        onClick={() => handleVerDetallesFactura(factura)}
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors border border-slate-200"
+                    >
+                        Detalles
+                    </button>
                 </td>
             </tr>
         ))
@@ -391,6 +422,65 @@ const nuevaFactura = {
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Orden</span>
                             <span className="text-2xl font-black italic text-slate-900">${Number(selectedOrden.total).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Detalles de Factura */}
+            {isFacturaModalOpen && selectedFactura && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsFacturaModalOpen(false)}></div>
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl z-10 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-slate-900">Detalles Factura #{selectedFactura.id}</h3>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mt-1">
+                                    Cliente: {selectedFactura.nombre_cliente || `ID ${selectedFactura.id_usuario}`}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setIsFacturaModalOpen(false)}
+                                className="w-10 h-10 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1 bg-white">
+                            {loadingFacturaDetalles ? (
+                                <p className="text-center text-slate-400 italic py-12">Cargando detalles...</p>
+                            ) : facturaDetalles.length === 0 ? (
+                                <p className="text-center text-slate-400 italic py-12">No hay detalles para esta factura.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {facturaDetalles.map(item => (
+                                        <div key={item.id} className="flex gap-4 p-4 border border-slate-100 rounded-2xl bg-slate-50/50 items-center">
+                                            <div className="w-16 h-16 bg-white rounded-xl overflow-hidden flex-shrink-0 p-2 border border-slate-100">
+                                                <img
+                                                    src={`http://localhost:5000/${item.imagen?.replace(/\\/g, '/')}`}
+                                                    alt={item.nombre_producto}
+                                                    className="w-full h-full object-contain"
+                                                    onError={(e) => { e.target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2240%22%20height%3D%2240%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23eee%22/%3E%3C/svg%3E'; }}
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-slate-800">{item.nombre_producto}</h4>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">ID Producto: {item.producto_id}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-right">
+                                                    <div className="text-slate-500 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
+                                                    <div className="text-blue-600 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Factura</span>
+                            <span className="text-2xl font-black italic text-slate-900">${Number(selectedFactura.total).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
