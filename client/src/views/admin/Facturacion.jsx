@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
+import { useCart } from '../../context/CartContext.jsx';
 
 const FacturacionView = () => {
     const [activeTab, setActiveTab] = useState('ordenes');
@@ -18,6 +19,19 @@ const FacturacionView = () => {
     const [selectedOrden, setSelectedOrden] = useState(null);
     const [detalles, setDetalles] = useState([]);
     const [loadingDetalles, setLoadingDetalles] = useState(false);
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [orderToConfirm, setOrderToConfirm] = useState(null);
+    const { showNotification } = useCart();
+    // Pago modal state
+    const [isPagoModalOpen, setIsPagoModalOpen] = useState(false);
+    const [metodos, setMetodos] = useState([]);
+    const [pagoFactura, setPagoFactura] = useState(null);
+    const [pagoMonto, setPagoMonto] = useState('');
+    const [pagoReferencia, setPagoReferencia] = useState('');
+    const [pagoMetodoId, setPagoMetodoId] = useState(null);
+    const [pagoFecha, setPagoFecha] = useState('');
+    const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
+    const [facturaToFinalize, setFacturaToFinalize] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'ordenes') {
@@ -26,6 +40,22 @@ const FacturacionView = () => {
             fetchFacturas(); // <--- LLAMADA: Cargar facturas al cambiar de pestaña
         }
     }, [activeTab]);
+
+    useEffect(() => {
+        // precargar métodos de pago para el modal
+        const fetchMetodos = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/facturas/metodos');
+                if (!res.ok) return setMetodos([]);
+                const data = await res.json();
+                setMetodos(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error('Error al obtener metodos de pago:', err);
+                setMetodos([]);
+            }
+        };
+        fetchMetodos();
+    }, []);
 
     const fetchOrdenes = async () => {
         setLoading(true);
@@ -84,12 +114,15 @@ const FacturacionView = () => {
         }
     };
 
-    // Procesar una orden: cambia el estado a "En Proceso"
-    const handleProcesar = async (orden) => {
-        const confirmar = window.confirm(`¿Desea convertir la Orden #${orden.id} en una Factura formal?`);
-        console.log("CONTENIDO DE LA ORDEN SELECCIONADA:", orden);
-        if (!confirmar) return;
+    // Abrir modal de confirmación para convertir orden en factura
+    const handleProcesar = (orden) => {
+        setOrderToConfirm(orden);
+        setConfirmModalOpen(true);
+    };
 
+    // Ejecutar la conversión (llamada al servidor)
+    const performProcesar = async (orden) => {
+        console.log("CONTENIDO DE LA ORDEN SELECCIONADA:", orden);
         setLoading(true);
         try {
             // 1. Primero obtenemos los detalles actuales de la orden (para asegurar precisión)
@@ -97,25 +130,25 @@ const FacturacionView = () => {
             const detallesOrden = await resDetalles.json();
 
             if (!detallesOrden || detallesOrden.length === 0) {
-                alert("No se puede facturar una orden sin productos.");
+                showNotification('No se puede facturar una orden sin productos.', 'error');
                 return;
             }
 
             // 2. Preparamos el objeto de la factura según tus campos
-            // ... dentro de handleProcesar
-// Dentro de handleProcesar en Facturacion.jsx
-const nuevaFactura = {
-    id_usuario: orden.id_usuario, // Asegúrate que tu SELECT de ordenes traiga id_usuario
-    total: orden.total,
-    total_pagado: orden.total,
-    orden_id: orden.id,
-    detalles: detallesOrden.map(d => ({
-        producto_id: d.id_producto,
-        cantidad: d.cantidad,
-        precio_unitario: d.precio_unitario,
-        subtotal: d.cantidad * d.precio_unitario
-    }))
-};      // 3. Enviamos la petición al endpoint de facturación
+            const nuevaFactura = {
+                id_usuario: orden.id_usuario, // Asegúrate que tu SELECT de ordenes traiga id_usuario
+                total: orden.total,
+                total_pagado: 0, // La factura inicia con 0 pagado hasta registrar pagos
+                orden_id: orden.id,
+                detalles: detallesOrden.map(d => ({
+                    producto_id: d.id_producto,
+                    cantidad: d.cantidad,
+                    precio_unitario: d.precio_unitario,
+                    subtotal: d.cantidad * d.precio_unitario
+                }))
+            };
+
+            // 3. Enviamos la petición al endpoint de facturación
             const resFactura = await fetch('http://localhost:5000/api/facturas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -123,7 +156,7 @@ const nuevaFactura = {
             });
 
             if (resFactura.ok) {
-                alert(`Factura generada exitosamente para el cliente ${orden.nombre}`);
+                showNotification(`Factura generada exitosamente para el cliente ${orden.nombre}`, 'success');
                 // Refrescar los datos
                 await fetchOrdenes();
                 setActiveTab('facturas'); // Movemos al usuario a la vista de facturas
@@ -134,7 +167,7 @@ const nuevaFactura = {
 
         } catch (error) {
             console.error("Error en el proceso:", error);
-            alert("Hubo un fallo: " + error.message);
+            showNotification('Hubo un fallo: ' + (error.message || ''), 'error');
         } finally {
             setLoading(false);
         }
@@ -305,6 +338,7 @@ const nuevaFactura = {
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha Venta</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Total</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pagado</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Acciones</th>
                                     </tr>
                                 </thead>
@@ -344,19 +378,171 @@ const nuevaFactura = {
                 <td className="px-6 py-4 text-sm font-bold text-green-600">
                     ${Number(factura.total_pagado).toFixed(2)}
                 </td>
+                <td className="px-6 py-4">{getStatusBadge(factura.estatus_id)}</td>
                 <td className="px-6 py-4 text-right">
-                    <button
-                        onClick={() => handleVerDetallesFactura(factura)}
-                        className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors border border-slate-200"
-                    >
-                        Detalles
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                        <button
+                            onClick={() => handleVerDetallesFactura(factura)}
+                            className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors border border-slate-200"
+                        >
+                            Detalles
+                        </button>
+
+                        <button
+                            disabled={factura.estatus_id === 5}
+                            onClick={() => {
+                                if (factura.estatus_id === 5) return; // inhabilitado cuando Finalizado
+                                if (factura.estatus_id === 3) {
+                                    // Ya pagada -> mostrar modal de finalizar
+                                    setFacturaToFinalize(factura);
+                                    setIsFinalizeModalOpen(true);
+                                    return;
+                                }
+                                setPagoFactura(factura);
+                                setPagoMonto('');
+                                setPagoReferencia('');
+                                setPagoMetodoId(null);
+                                setIsPagoModalOpen(true);
+                            }}
+                            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-colors border ${factura.estatus_id === 5 ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'text-white bg-green-600 hover:bg-green-700 border-green-700'}`}
+                            title={factura.estatus_id === 5 ? 'Factura finalizada' : 'Registrar pago'}
+                        >
+                            Pago
+                        </button>
+                    </div>
                 </td>
             </tr>
         ))
     )}
 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal de Pago */}
+                {isPagoModalOpen && pagoFactura && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsPagoModalOpen(false)}></div>
+                        <div className="bg-white rounded-[1rem] shadow-2xl w-full max-w-md z-10 overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="text-lg font-black">Registrar Pago - Factura #{pagoFactura.id}</h3>
+                                <button onClick={() => setIsPagoModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300">✕</button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Número Factura</label>
+                                    <div className="mt-2 text-sm font-bold">#{pagoFactura.id}</div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Método de Pago</label>
+                                    <select value={pagoMetodoId || ''} onChange={e => setPagoMetodoId(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
+                                        <option value="">-- Seleccione --</option>
+                                        {metodos.map(m => (
+                                            <option key={m.id} value={m.id}>{m.nombre || m.descripcion || `#${m.id}`}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Monto</label>
+                                    <input type="number" step="0.01" value={pagoMonto} onChange={e => setPagoMonto(e.target.value)} className="w-full mt-2 p-2 border rounded-md" />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Referencia</label>
+                                    <input type="text" value={pagoReferencia} onChange={e => setPagoReferencia(e.target.value)} className="w-full mt-2 p-2 border rounded-md" />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Fecha de Pago</label>
+                                    <input type="date" value={pagoFecha} onChange={e => setPagoFecha(e.target.value)} className="w-full mt-2 p-2 border rounded-md" />
+                                </div>
+
+                                <div className="pt-4">
+                                    <button
+                                        onClick={async () => {
+                                            // validar
+                                            if (!pagoMetodoId) return showNotification('Seleccione un método de pago', 'error');
+                                            const montoNum = Number(pagoMonto);
+                                            if (!montoNum || montoNum <= 0) return showNotification('Ingrese un monto válido', 'error');
+
+                                            try {
+                                                const payload = {
+                                                    factura_id: pagoFactura.id,
+                                                    id_metodo: pagoMetodoId,
+                                                    monto: montoNum,
+                                                    referencia: pagoReferencia,
+                                                    fecha_pago: pagoFecha || undefined
+                                                };
+
+                                                const res = await fetch('http://localhost:5000/api/facturas/pagos', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(payload)
+                                                });
+
+                                                if (res.ok) {
+                                                    showNotification('Pago registrado correctamente', 'success');
+                                                    setIsPagoModalOpen(false);
+                                                    await fetchFacturas();
+                                                } else {
+                                                    const err = await res.json().catch(() => ({ message: 'Error al guardar pago' }));
+                                                    throw new Error(err.message || 'Error al guardar pago');
+                                                }
+                                            } catch (err) {
+                                                console.error('Error al aplicar pago:', err);
+                                                showNotification('Error al aplicar pago: ' + (err.message || ''), 'error');
+                                            }
+                                        }}
+                                        className="w-full bg-blue-600 text-white font-black py-2 rounded-md"
+                                    >Aplicar</button>
+                                </div>
+                            </div>
+                            <div className="p-4 border-t bg-slate-50 text-right">
+                                <div className="text-sm text-slate-600">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span></div>
+                                <div className="text-sm text-slate-600">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span></div>
+                                <div className="text-sm">Pendiente: <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {/* Modal de Finalizar factura (cuando ya está pagada) */}
+                {isFinalizeModalOpen && facturaToFinalize && (
+                    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsFinalizeModalOpen(false)}></div>
+                        <div className="bg-white rounded-[1rem] shadow-2xl w-full max-w-md z-10 overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="text-lg font-black">Esta factura ya fue pagada</h3>
+                                <button onClick={() => setIsFinalizeModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300">✕</button>
+                            </div>
+                            <div className="p-6">
+                                <p className="text-sm text-slate-600">¿Desea marcar esta factura como <strong>Finalizada</strong>?</p>
+                                <div className="mt-6 flex gap-3 justify-end">
+                                    <button onClick={() => setIsFinalizeModalOpen(false)} className="px-4 py-2 border rounded-md">Cancelar</button>
+                                    <button onClick={async () => {
+                                        try {
+                                            const res = await fetch(`http://localhost:5000/api/facturas/${facturaToFinalize.id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ estatus_id: 5 })
+                                            });
+                                            if (res.ok) {
+                                                showNotification('Factura marcada como Finalizada', 'success');
+                                                setIsFinalizeModalOpen(false);
+                                                await fetchFacturas();
+                                            } else {
+                                                const err = await res.json().catch(() => ({ message: 'Error al actualizar factura' }));
+                                                throw new Error(err.message || 'Error al actualizar factura');
+                                            }
+                                        } catch (err) {
+                                            console.error('Error finalizando factura:', err);
+                                            showNotification('Error al finalizar factura: ' + (err.message || ''), 'error');
+                                        }
+                                    }} className="px-4 py-2 bg-blue-600 text-white rounded-md">Finalizar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -481,6 +667,20 @@ const nuevaFactura = {
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Factura</span>
                             <span className="text-2xl font-black italic text-slate-900">${Number(selectedFactura.total).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal de Confirmación para convertir Orden a Factura */}
+            {confirmModalOpen && orderToConfirm && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40" onClick={() => { setConfirmModalOpen(false); setOrderToConfirm(null); }}></div>
+                    <div className="bg-white rounded-xl p-6 z-10 w-full max-w-sm">
+                        <h3 className="text-lg font-bold">Confirmar conversión</h3>
+                        <p className="mt-2 text-sm">¿Desea convertir la Orden #{orderToConfirm.id} en una factura?</p>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => { setConfirmModalOpen(false); setOrderToConfirm(null); }} className="px-4 py-2 border rounded-md">Cancelar</button>
+                            <button onClick={async () => { setConfirmModalOpen(false); await performProcesar(orderToConfirm); setOrderToConfirm(null); }} className="px-4 py-2 bg-blue-600 text-white rounded-md">Confirmar</button>
                         </div>
                     </div>
                 </div>

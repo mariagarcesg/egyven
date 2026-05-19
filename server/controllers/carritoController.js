@@ -4,6 +4,7 @@ const db = require('../config/db');
 exports.obtenerCarrito = async (req, res) => {
     const { usuario_id } = req.params;
     try {
+        console.log(`[carritoController] obtenerCarrito para usuario_id=${usuario_id}`);
         const query = `
             SELECT c.id as carrito_id, c.id_usuario, c.id_producto, c.cantidad, c.subtotal, c.precio_unitario,
                    p.nombre, p.imagen, cat.nombre as categoria_nombre, p.stock_actual
@@ -13,6 +14,7 @@ exports.obtenerCarrito = async (req, res) => {
             WHERE c.id_usuario = ?
         `;
         const [rows] = await db.query(query, [usuario_id]);
+        console.log(`[carritoController] filas obtenidas: ${rows.length}`);
         res.status(200).json(rows);
     } catch (error) {
         console.error(error);
@@ -26,6 +28,7 @@ exports.agregarAlCarrito = async (req, res) => {
     const cantAgregar = cantidad || 1;
 
     try {
+        console.log(`[carritoController] agregarAlCarrito usuario_id=${usuario_id} producto_id=${producto_id} cantidad=${cantAgregar}`);
         // 1. Obtener detalles del producto para validar stock y precio
         const [productoInfo] = await db.query('SELECT nombre, precio_venta, stock_actual FROM productos WHERE id = ?', [producto_id]);
         
@@ -51,10 +54,12 @@ exports.agregarAlCarrito = async (req, res) => {
         }
 
         if (existing.length > 0) {
+            console.log(`[carritoController] actualizando carrito id=${existing[0].id} -> nueva cantidad=${newCantidad}`);
             // Actualizar cantidad, MySQL calculará el subtotal automáticamente
             await db.query('UPDATE carrito SET cantidad = ? WHERE id = ?', [newCantidad, existing[0].id]);
             res.status(200).json({ message: 'Cantidad actualizada en el carrito', action: 'updated' });
         } else {
+            console.log(`[carritoController] insertando nuevo item en carrito usuario=${usuario_id} producto=${producto_id} cantidad=${newCantidad}`);
             // Insertar nuevo producto, MySQL calculará el subtotal automáticamente
             const insertQuery = `
                 INSERT INTO carrito (id_usuario, id_producto, nombre, cantidad, precio_unitario) 

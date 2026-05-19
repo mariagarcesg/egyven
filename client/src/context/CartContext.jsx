@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import Notification from '../components/ui/Notification.jsx';
 
 const CartContext = createContext();
 
@@ -8,15 +9,23 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loadingCart, setLoadingCart] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
 
   const fetchCart = async () => {
-    if (!user?.id) return;
+    const stored = localStorage.getItem('user');
+    const currentUser = stored ? JSON.parse(stored) : null;
+    if (!currentUser?.id) return;
     setLoadingCart(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/carrito/${user.id}`);
+      const res = await fetch(`http://localhost:5000/api/carrito/${currentUser.id}`);
       const data = await res.json();
       setCartItems(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -36,7 +45,9 @@ export const CartProvider = ({ children }) => {
   }, [user?.id]);
 
   const addToCart = async (producto_id, cantidad = 1) => {
-    if (!user?.id) {
+    const stored = localStorage.getItem('user');
+    const currentUser = stored ? JSON.parse(stored) : null;
+    if (!currentUser?.id) {
       alert("Debes iniciar sesión para añadir productos al carrito.");
       return;
     }
@@ -45,7 +56,7 @@ export const CartProvider = ({ children }) => {
       const res = await fetch('http://localhost:5000/api/carrito/agregar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario_id: user.id, producto_id, cantidad })
+        body: JSON.stringify({ usuario_id: currentUser.id, producto_id, cantidad })
       });
       
       const data = await res.json();
@@ -53,8 +64,11 @@ export const CartProvider = ({ children }) => {
       if (res.ok) {
         setIsCartOpen(true); // Abrir modal automáticamente
         await fetchCart(); // Refrescar carrito
+        showNotification('Producto agregado al carrito', 'success');
       } else {
-        alert(data.error || 'Error al agregar al carrito');
+        const msg = data.error || 'Error al agregar al carrito';
+        showNotification(msg, 'error');
+        alert(msg);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -69,6 +83,7 @@ export const CartProvider = ({ children }) => {
       });
       if (res.ok) {
         await fetchCart();
+        showNotification('Producto eliminado del carrito', 'success');
       }
     } catch (error) {
       console.error('Error removing from cart:', error);
@@ -85,8 +100,11 @@ export const CartProvider = ({ children }) => {
       const data = await res.json();
       if (res.ok) {
         await fetchCart();
+        showNotification('Cantidad actualizada en el carrito', 'success');
       } else {
-        alert(data.error || 'Error al actualizar cantidad');
+        const msg = data.error || 'Error al actualizar cantidad';
+        showNotification(msg, 'error');
+        alert(msg);
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -94,21 +112,26 @@ export const CartProvider = ({ children }) => {
   };
 
   const checkoutOrder = async (total) => {
-    if (!user?.id || cartItems.length === 0) return { success: false };
+    const stored = localStorage.getItem('user');
+    const currentUser = stored ? JSON.parse(stored) : null;
+    if (!currentUser?.id || cartItems.length === 0) return { success: false };
 
     try {
       const res = await fetch('http://localhost:5000/api/ordenes/crear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario_id: user.id, total })
+        body: JSON.stringify({ usuario_id: currentUser.id, total })
       });
       const data = await res.json();
       if (res.ok) {
         setIsCartOpen(false); // Cerramos el modal
         await fetchCart(); // Refresca, dejándolo vacío
+        showNotification('Orden creada exitosamente', 'success');
         return { success: true };
       } else {
-        return { success: false, code: data.error, message: data.message || data.error || 'Error al procesar la orden' };
+        const message = data.message || data.error || 'Error al procesar la orden';
+        showNotification(message, 'error');
+        return { success: false, code: data.error, message };
       }
     } catch (error) {
       console.error('Error in checkout:', error);
@@ -119,8 +142,13 @@ export const CartProvider = ({ children }) => {
   const toggleCart = () => setIsCartOpen(!isCartOpen);
 
   return (
-    <CartContext.Provider value={{ cartItems, isCartOpen, loadingCart, addToCart, removeFromCart, updateQuantity, checkoutOrder, toggleCart, fetchCart }}>
-      {children}
-    </CartContext.Provider>
+    <>
+      <CartContext.Provider value={{ cartItems, isCartOpen, loadingCart, addToCart, removeFromCart, updateQuantity, checkoutOrder, toggleCart, fetchCart, showNotification }}>
+        {children}
+      </CartContext.Provider>
+      {notification && (
+        <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />
+      )}
+    </>
   );
 };

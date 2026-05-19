@@ -20,6 +20,7 @@ import FacturacionView from '../views/admin/Facturacion.jsx';
 import UsuariosView from '../views/admin/Usuarios.jsx';
 import ComparadorView from '../views/admin/Comparador.jsx';
 import PedidosView from '../views/Pedidos.jsx';
+import Reportes from '../views/admin/Reportes.jsx';
 
 // Componente simple para proteger rutas (Opcional pero recomendado)
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -84,6 +85,15 @@ const AppRoutes = () => {
           element={
             <PrivateRoute allowedRoles={[1]}>
               <UsuariosView />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/reportes"
+          element={
+            <PrivateRoute allowedRoles={[1]}>
+              <Reportes />
             </PrivateRoute>
           }
         />

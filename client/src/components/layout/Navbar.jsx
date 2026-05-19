@@ -45,7 +45,12 @@ const Navbar = () => {
         {/* Links Centrales */}
         <div className="hidden md:flex items-center gap-8">
           {isAdmin ? (
-            <button onClick={() => navigate('/principal')} className={getLinkClass('/principal')}>Módulos</button>
+            <>
+              <button onClick={() => navigate('/principal')} className={getLinkClass('/principal')}>Módulos</button>
+              {user?.rol_id === 1 && (
+                <button onClick={() => navigate('/admin/reportes')} className={getLinkClass('/admin/reportes')}>Reportes</button>
+              )}
+            </>
           ) : (
             <button onClick={() => navigate('/')} className={getLinkClass('/')}>Inicio</button>
           )}

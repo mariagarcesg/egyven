@@ -61,6 +61,18 @@ exports.crearOrden = async (req, res) => {
             // await db.query('UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?', [item.cantidad, item.id_producto]);
         }
 
+        // Si la tabla detalle_orden tiene columna estatus_id, marcar los detalles como Pendiente (1)
+        try {
+            const [detailCols] = await db.query("SHOW COLUMNS FROM detalle_orden");
+            const detailColNames = detailCols.map(c => c.Field.toLowerCase());
+            if (detailColNames.includes('estatus_id')) {
+                await db.query('UPDATE detalle_orden SET estatus_id = 1 WHERE id_orden = ?', [id_orden]);
+            }
+        } catch (e) {
+            // No bloquear el flujo si la tabla/columna no existe
+            console.warn('No se pudo setear estatus en detalle_orden (posible columna ausente):', e.message || e);
+        }
+
         // 4. Vaciar el carrito
         await db.query('DELETE FROM carrito WHERE id_usuario = ?', [usuario_id]);
 

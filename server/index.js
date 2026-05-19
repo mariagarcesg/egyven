@@ -34,17 +34,22 @@ app.use('/api/facturas', facturasRoutes);
 // DEBUG: listar rutas registradas (solo en entorno de desarrollo)
 if (process.env.NODE_ENV !== 'production') {
     const routeList = [];
-    app._router.stack.forEach(mw => {
-        if (mw.route && mw.route.path) {
-            routeList.push({ path: mw.route.path, methods: mw.route.methods });
-        } else if (mw.name === 'router' && mw.handle && mw.handle.stack) {
-            mw.handle.stack.forEach(r => {
-                if (r.route) {
-                    routeList.push({ path: r.route.path, methods: r.route.methods });
-                }
-            });
-        }
-    });
+    const routerStack = app._router && app._router.stack ? app._router.stack : null;
+    if (routerStack) {
+        routerStack.forEach(mw => {
+            if (mw.route && mw.route.path) {
+                routeList.push({ path: mw.route.path, methods: mw.route.methods });
+            } else if (mw.name === 'router' && mw.handle && mw.handle.stack) {
+                mw.handle.stack.forEach(r => {
+                    if (r.route) {
+                        routeList.push({ path: r.route.path, methods: r.route.methods });
+                    }
+                });
+            }
+        });
+    } else {
+        console.warn('Warning: app._router is not initialized yet; no routes to list.');
+    }
     console.log('Registered routes:', JSON.stringify(routeList, null, 2));
 }
 
