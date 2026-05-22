@@ -1,11 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
+import axios from 'axios';
 
 const InventarioView = () => {
+    const [productos, setProductos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const fetchProductos = async () => {
+            try {
+                setLoading(true);
+                const res = await axios.get(`${API_URL}/api/productos`);
+                setProductos(res.data || []);
+            } catch (err) {
+                setError('Error al cargar productos');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProductos();
+    }, []);
+
     return (
         <div className="min-h-screen bg-white text-slate-900 font-sans">
             <Navbar />
-            <div className="h-20"></div> {/* Espaciador para el Navbar fijo */}
+            <div className="h-20"></div>
 
             <header className="py-14 px-6 border-b border-slate-100 bg-slate-50/50">
                 <div className="max-w-7xl mx-auto flex justify-between items-end">
@@ -22,15 +44,49 @@ const InventarioView = () => {
             </header>
 
             <main className="max-w-7xl mx-auto px-6 py-12">
-                {/* Contenedor de la Tabla (Fondo Blanco con sombra suave) */}
-                <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm min-h-[400px] flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                        </div>
-                        <p className="text-slate-500 font-medium italic">Cargando base de datos de productos...</p>
+                <div className="bg-white border border-slate-200 rounded-[1rem] overflow-hidden shadow-sm min-h-[200px]">
+                    <div className="p-6">
+                        <h2 className="text-xl font-bold mb-4">Productos</h2>
+
+                        {loading && (
+                            <div className="text-slate-500 italic">Cargando productos...</div>
+                        )}
+
+                        {error && (
+                            <div className="text-red-500">{error}</div>
+                        )}
+
+                        {!loading && !error && (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SKU</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Costo</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio Venta</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock Actual</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Categoría</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-100">
+                                        {productos.map((p) => (
+                                            <tr key={p.id}>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{p.nombre}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.SKU || p.sku || '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.costo != null ? p.costo : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.precio_venta != null ? p.precio_venta : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.stock_actual != null ? p.stock_actual : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.categoria_nombre || (p.categoria_id && p.categoria_id.nombre) || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {productos.length === 0 && (
+                                    <div className="py-6 text-center text-slate-500">No se encontraron productos.</div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
