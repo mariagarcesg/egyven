@@ -68,41 +68,56 @@ const CatalogoView = () => {
 
       {/* BARRA DE CATEGORÍAS */}
       <div className={`sticky top-20 z-40 backdrop-blur-md border-b py-6 ${isAdmin ? 'bg-white/90 border-slate-200' : 'bg-[#05070a]/90 border-white/5'}`}>
-        <div className="flex justify-center gap-3 overflow-x-auto px-4">
+        {/* Botones en pantallas md+ */}
+        <div className="hidden md:flex justify-center gap-3 overflow-x-auto px-4">
           {categorias.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeCategory === cat
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeCategory === cat
                 ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-600/20'
                 : (isAdmin
                   ? 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                   : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300')
                 }`}
-            >
+              >
               {cat}
             </button>
           ))}
         </div>
+
+        {/* Select en pantallas móviles */}
+        <div className="md:hidden flex justify-center px-4">
+          <select
+            value={activeCategory}
+            onChange={(e) => setActiveCategory(e.target.value)}
+            className={`w-full max-w-md rounded-xl px-4 py-2 text-sm font-black uppercase tracking-widest transition-all border ${isAdmin ? 'bg-white/90 border-slate-200 text-slate-900' : 'bg-[#0b1116]/80 border-white/5 text-white'}`}
+            aria-label="Seleccionar categoría"
+          >
+            {categorias.map(cat => (
+              <option key={cat} value={cat} className="text-sm">{cat}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* GRID DE PRODUCTOS */}
-      <main className="max-w-7xl mx-auto px-6 py-16">
+      <main className="max-w-7xl mx-auto px-4 py-16">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-blue-500 font-black tracking-widest text-xs uppercase">Cargando Inventario Real...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
             {productosFiltrados.map((prod) => (
-              <div key={prod.id} className={`group border rounded-[2.5rem] overflow-hidden transition-all duration-500 shadow-2xl ${isAdmin
+              <div key={prod.id} className={`group border rounded-[2.5rem] overflow-hidden transition-all duration-500 shadow-2xl w-full ${isAdmin
                 ? 'bg-white border-slate-200 hover:border-blue-500/40'
                 : 'bg-[#0d1117] border-white/5 hover:border-blue-500/40'
                 }`}>
 
                 {/* Contenedor de Imagen */}
-                <div className={`aspect-square relative overflow-hidden flex items-center justify-center p-12 ${isAdmin ? 'bg-slate-50' : 'bg-slate-800/50'}`}>
+                <div className={`aspect-square relative overflow-hidden flex items-center justify-center p-6 md:p-12 ${isAdmin ? 'bg-slate-50' : 'bg-slate-800/50'}`}>
                   <div className={`absolute inset-0 opacity-80 ${isAdmin ? 'bg-gradient-to-t from-white to-transparent' : 'bg-gradient-to-t from-[#0d1117] to-transparent'}`}></div>
                   <img
                     src={`http://localhost:5000/${prod.imagen?.replace(/\\/g, '/')}`}
@@ -114,7 +129,7 @@ const CatalogoView = () => {
                   />
                 </div>
 
-                <div className="p-10">
+                <div className="p-6 md:p-10">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <span className="text-blue-500 text-[10px] font-black uppercase tracking-widest">{prod.categoria_nombre}</span>

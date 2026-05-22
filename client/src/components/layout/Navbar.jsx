@@ -7,17 +7,24 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    } else {
+      setUser(null);
     }
+    // Cerrar menú móvil al cambiar de ruta
+    setMobileOpen(false);
   }, [location]); // Se actualiza al cambiar de ruta para reflejar cambios en la sesión
 
   const handleLogout = () => {
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    setUser(null);
+    setMobileOpen(false);
+    navigate('/');
   };
 
   const isAdmin = user?.rol_id === 1 || user?.rol_id === 4;
@@ -35,15 +42,16 @@ const Navbar = () => {
   };
 
   return (
+    <>
     <nav className={`fixed top-0 w-full z-[100] backdrop-blur-xl border-b transition-colors duration-500 ${isAdmin ? 'bg-white/90 border-slate-200' : 'bg-[#05070a]/80 border-white/5'}`}>
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between flex-wrap">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(isAdmin ? '/principal' : '/')}>
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white italic">E</div>
           <span className={`text-xl font-black tracking-tighter ${isAdmin ? 'text-slate-900' : 'text-white'}`}>EGY<span className="text-blue-500">VEN</span></span>
         </div>
         {/* Links Centrales */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-8">
           {isAdmin ? (
             <>
               <button onClick={() => navigate('/principal')} className={getLinkClass('/principal')}>Módulos</button>
@@ -83,7 +91,23 @@ const Navbar = () => {
           )}
         </div>
         {/* Botones Derecha / Usuario */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          {/* Botón hamburguesa visible solo en móvil */}
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            className="md:hidden p-2 rounded-lg text-white hover:bg-white/5"
+            aria-label="Abrir menú"
+          >
+            {mobileOpen ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
           {user ? (
             <div className="flex items-center gap-6">
               {/* Botón Carrito */}
@@ -108,7 +132,7 @@ const Navbar = () => {
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 text-[10px] font-black italic group-hover:bg-blue-500/20 transition-colors">
                   {(user.username || user.nombre || 'U').charAt(0).toUpperCase()}
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isAdmin ? 'text-slate-900 group-hover:text-blue-600' : 'text-white group-hover:text-blue-400'}`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors max-w-[90px] md:max-w-[140px] truncate ${isAdmin ? 'text-slate-900 group-hover:text-blue-600' : 'text-white group-hover:text-blue-400'}`}>
                   {user.username || user.nombre || 'Usuario'}
                 </span>
               </div>
@@ -128,6 +152,68 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
+    {/* Menú móvil */}
+    {mobileOpen && (
+    <div className="md:hidden fixed inset-x-0 top-20 z-[90] bg-[#05070a]/95 backdrop-blur-sm border-t border-white/5 max-h-[calc(100vh-5rem)] overflow-auto">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-4">
+          {isAdmin ? (
+            <>
+              <button onClick={() => { navigate('/principal'); setMobileOpen(false); }} className="text-white text-left">Módulos</button>
+              {user?.rol_id === 1 && (
+                <button onClick={() => { navigate('/admin/reportes'); setMobileOpen(false); }} className="text-white text-left">Reportes</button>
+              )}
+            </>
+          ) : (
+            <button onClick={() => { navigate('/'); setMobileOpen(false); }} className="text-white text-left">Inicio</button>
+          )}
+
+          <button onClick={() => { navigate('/catalogo'); setMobileOpen(false); }} className="text-white text-left">Catálogo</button>
+
+          {!isAdmin && (
+            <>
+              {user?.rol_id === 5 && (
+                <button onClick={() => { navigate('/pedidos'); setMobileOpen(false); }} className="text-white text-left">Mis Pedidos</button>
+              )}
+              <button onClick={() => { navigate('/nosotros'); setMobileOpen(false); }} className="text-white text-left">Nosotros</button>
+              <button
+                onClick={() => {
+                  if (window.location.pathname !== '/') {
+                    navigate('/');
+                    setTimeout(() => {
+                      const contacto = document.getElementById('contacto');
+                      if (contacto) contacto.scrollIntoView({ behavior: 'smooth' });
+                    }, 300);
+                  } else {
+                    const contacto = document.getElementById('contacto');
+                    if (contacto) contacto.scrollIntoView({ behavior: 'smooth' });
+                  }
+                  setMobileOpen(false);
+                }}
+                className="text-white text-left"
+              >
+                Contacto
+              </button>
+            </>
+          )}
+
+          <div className="border-t border-white/5 mt-2 pt-4 flex flex-col gap-3">
+            {user ? (
+              <>
+                <button onClick={() => { navigate('/perfil'); setMobileOpen(false); }} className="text-white text-left">Mi Perfil</button>
+                <button onClick={() => { toggleCart(); setMobileOpen(false); }} className="text-white text-left">Carrito ({cartItems?.length || 0})</button>
+                <button onClick={() => { handleLogout(); }} className="text-red-400 text-left font-black">Salir</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { navigate('/login'); setMobileOpen(false); }} className="text-white text-left">Iniciar Sesión</button>
+                <button onClick={() => { navigate('/signup'); setMobileOpen(false); }} className="text-white text-left">Registrarse</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
