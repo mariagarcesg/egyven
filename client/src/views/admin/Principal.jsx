@@ -19,7 +19,8 @@ const Principal = () => {
     { id: 'facturacion', title: 'Facturación', desc: 'Ventas y reportes financieros.', color: 'bg-blue-600', path: '/admin/facturacion' },
     { id: 'usuarios', title: 'Usuarios', desc: 'Personal y permisos.', color: 'bg-indigo-600', path: '/admin/usuarios' },
     { id: 'inventario', title: 'Inventario', desc: 'Stock y componentes.', color: 'bg-cyan-600', path: '/admin/inventario' },
-    { id: 'comparador', title: 'Comparador', desc: 'Análisis de costos.', color: 'bg-slate-800', path: '/admin/comparador' }
+    { id: 'comparador', title: 'Comparador', desc: 'Análisis de costos.', color: 'bg-slate-800', path: '/admin/comparador' },
+    { id: 'servicio-tecnico', title: 'Servicio Técnico', desc: 'Gestión de servicios y reparaciones.', color: 'bg-black', path: '/admin/servicio-tecnico' }
   ];
 
   return (
@@ -34,7 +35,7 @@ const Principal = () => {
             PANEL <span className="text-blue-600">ADMINISTRATIVO</span>
           </h1>
           <p className="text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed">
-            Bienvenido, <span className="font-bold text-slate-800">{user?.nombre}</span>. Gestiona los procesos operativos de EGYVEN.
+            Bienvenido, <span className="font-bold text-slate-800">{user?.nombre}</span>. Gestiona los procesos operativos de TECNOVA.
           </p>
         </div>
       </header>
@@ -42,7 +43,13 @@ const Principal = () => {
       <main className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {modulos
-            .filter(mod => !(user?.rol_id === 4 && mod.id === 'usuarios'))
+            .filter(mod => {
+              // Mostrar módulo 'servicio-tecnico' solo a roles 1, 2 y 4
+              if (mod.id === 'servicio-tecnico') return [1, 2, 4].includes(user?.rol_id);
+              // Ocultar módulo 'usuarios' para rol 4
+              if (user?.rol_id === 4 && mod.id === 'usuarios') return false;
+              return true;
+            })
             .map((mod) => (
               <div
                 key={mod.id}

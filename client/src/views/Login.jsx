@@ -143,7 +143,7 @@ const Login = () => {
         </div>
 
         <p className="text-center mt-8 text-slate-600 text-[10px] uppercase tracking-widest">
-          © 2026 EGYVEN San Diego. Control de Activos.
+          © 2026 TECNOVA San Diego. Control de Activos.
         </p>
       </div>
     </div>

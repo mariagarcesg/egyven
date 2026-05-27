@@ -83,7 +83,7 @@ const SignUp = () => {
         <div className="bg-[#0d1117]/80 backdrop-blur-2xl border border-white/5 p-10 rounded-[2.5rem] shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-2">Crear Cuenta</h2>
           <p className="text-slate-400 text-sm mb-8">
-            Regístrate para acceder al sistema de gestión de EGYVEN.
+            Regístrate para acceder al sistema de gestión de TECNOVA.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -139,7 +139,7 @@ const SignUp = () => {
         </div>
 
         <p className="text-center mt-8 text-slate-600 text-[10px] uppercase tracking-widest">
-          © 2026 EGYVEN San Diego. Control de Activos.
+          © 2026 TECNOVA San Diego. Control de Activos.
         </p>
       </div>
     </div>

@@ -47,8 +47,8 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between flex-wrap">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(isAdmin ? '/principal' : '/')}>
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white italic">E</div>
-          <span className={`text-xl font-black tracking-tighter ${isAdmin ? 'text-slate-900' : 'text-white'}`}>EGY<span className="text-blue-500">VEN</span></span>
+          <div className="w-8 h-8 bg-blue-800 rounded-lg flex items-center justify-center font-black text-white italic">T</div>
+          <span className={`text-xl font-black tracking-tighter ${isAdmin ? 'text-slate-900' : 'text-white'}`}>TEC<span className="text-blue-600">NOVA</span></span>
         </div>
         {/* Links Centrales */}
         <div className="hidden lg:flex items-center gap-8">

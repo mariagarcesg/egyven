@@ -42,14 +42,20 @@ exports.login = async (req, res) => {
         const [rows] = await db.query(query, [username, password]);
 
         if (rows.length > 0) {
-            // Usuario encontrado
+            // Verificar si el usuario está activo
+            if (rows[0].status === 0 || rows[0].status === '0') {
+                return res.status(403).json({ error: 'Usuario inactivo' });
+            }
+
+            // Usuario encontrado y activo
             res.status(200).json({
                 message: 'Inicio de sesión exitoso',
                 usuario: {
                     id: rows[0].id,
                     username: rows[0].username,
                     nombre: rows[0].nombre,
-                    rol_id: rows[0].rol_id
+                    rol_id: rows[0].rol_id,
+                    status: rows[0].status
                 }
             });
         } else {
@@ -65,7 +71,8 @@ exports.login = async (req, res) => {
 // Función para obtener todos los usuarios (para pruebas)
 exports.obtenerUsuarios = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, username, nombre, apellido FROM usuarios');
+        // Incluir el campo `status` para que el frontend pueda mostrar Activo/Inactivo
+        const [rows] = await db.query('SELECT id, username, nombre, apellido, status FROM usuarios');
         console.log("Datos recuperados de MySQL:", rows);
         res.json(rows);
     } catch (error) {
@@ -78,7 +85,8 @@ exports.obtenerUsuarios = async (req, res) => {
 exports.obtenerUsuarioPorId = async (req, res) => {
     const { id } = req.params;
     try {
-        const query = 'SELECT id, username, password, rol_id, cedula_rif, nombre, apellido, telefono, email, direccion FROM usuarios WHERE id = ?';
+        // Incluir `status` en la consulta por ID
+        const query = 'SELECT id, username, password, rol_id, cedula_rif, nombre, apellido, telefono, email, direccion, status FROM usuarios WHERE id = ?';
         const [rows] = await db.query(query, [id]);
         
         if (rows.length > 0) {
@@ -95,7 +103,7 @@ exports.obtenerUsuarioPorId = async (req, res) => {
 // Función para actualizar el perfil de un usuario
 exports.actualizarUsuario = async (req, res) => {
     const { id } = req.params;
-    const { username, password, cedula_rif, nombre, apellido, telefono, email, direccion } = req.body;
+    const { username, password, cedula_rif, nombre, apellido, telefono, email, direccion, status } = req.body;
     
     try {
         let query;
@@ -105,23 +113,26 @@ exports.actualizarUsuario = async (req, res) => {
         if (password && password.trim() !== '') {
             query = `
                 UPDATE usuarios 
-                SET username = ?, password = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?
+                SET username = ?, password = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?, status = ?
                 WHERE id = ?
             `;
-            params = [username, password, cedula_rif, nombre, apellido, telefono, email, direccion, id];
+            params = [username, password, cedula_rif, nombre, apellido, telefono, email, direccion, status, id];
         } else {
             query = `
                 UPDATE usuarios 
-                SET username = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?
+                SET username = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?, status = ?
                 WHERE id = ?
             `;
-            params = [username, cedula_rif, nombre, apellido, telefono, email, direccion, id];
+            params = [username, cedula_rif, nombre, apellido, telefono, email, direccion, status, id];
         }
         
+        console.log('Actualizar usuario payload:', params);
         const [result] = await db.query(query, params);
         
         if (result.affectedRows > 0) {
-            res.status(200).json({ message: 'Perfil actualizado exitosamente' });
+            // Devolver el usuario actualizado para confirmación
+            const [updatedRows] = await db.query('SELECT id, username, nombre, apellido, telefono, email, direccion, status, rol_id FROM usuarios WHERE id = ?', [id]);
+            res.status(200).json({ message: 'Perfil actualizado exitosamente', usuario: updatedRows[0] });
         } else {
             res.status(404).json({ error: 'Usuario no encontrado o sin cambios' });
         }
