@@ -23,6 +23,7 @@ const productosRoutes = require('./routes/productos');
 const carritoRoutes = require('./routes/carrito');
 const ordenesRoutes = require('./routes/ordenes');
 const facturasRoutes = require('./routes/facturas');
+const servicioTecnicoRoutes = require('./routes/servicioTecnico');
 
 // Uso de Rutas
 app.use('/api/usuarios', usuariosRoutes);
@@ -30,6 +31,7 @@ app.use('/api/productos', productosRoutes);
 app.use('/api/carrito', carritoRoutes);
 app.use('/api/ordenes', ordenesRoutes);
 app.use('/api/facturas', facturasRoutes);
+app.use('/api/servicio-tecnico', servicioTecnicoRoutes);
 
 // DEBUG: listar rutas registradas (solo en entorno de desarrollo)
 if (process.env.NODE_ENV !== 'production') {

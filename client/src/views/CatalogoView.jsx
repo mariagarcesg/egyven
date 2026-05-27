@@ -109,9 +109,9 @@ const CatalogoView = () => {
             <p className="text-blue-500 font-black tracking-widest text-xs uppercase">Cargando Inventario Real...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-10">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-10">
             {productosFiltrados.map((prod) => (
-              <div key={prod.id} className={`group border rounded-[2.5rem] overflow-hidden transition-all duration-500 shadow-2xl w-full ${isAdmin
+              <div key={prod.id} className={`group border rounded-[2.5rem] overflow-hidden transition-all duration-500 shadow-2xl w-full flex flex-col h-full ${isAdmin
                 ? 'bg-white border-slate-200 hover:border-blue-500/40'
                 : 'bg-[#0d1117] border-white/5 hover:border-blue-500/40'
                 }`}>
@@ -124,12 +124,12 @@ const CatalogoView = () => {
                     alt={prod.nombre}
                     className="relative z-10 w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
-                      e.target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22400%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23111%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%23444%22%20text-anchor%3D%22middle%22%3EEGYVEN%20-%20IMAGEN%20NO%20DISPONIBLE%3C/text%3E%3C/svg%3E';
+                      e.target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22400%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23111%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%23444%22%20text-anchor%3D%22middle%22%3ETECNOVA%20-%20IMAGEN%20NO%20DISPONIBLE%3C/text%3E%3C/svg%3E';
                     }}
                   />
                 </div>
 
-                <div className="p-6 md:p-10">
+                <div className="p-6 md:p-10 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <span className="text-blue-500 text-[10px] font-black uppercase tracking-widest">{prod.categoria_nombre}</span>
@@ -151,7 +151,7 @@ const CatalogoView = () => {
                     Stock disponible: <span className="text-blue-500 font-bold">{prod.stock_actual} unidades</span>.
                   </p>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 mt-auto">
                     <button
                       onClick={() => document.getElementById(`modal_producto_${prod.id}`).showModal()}
                       className={`flex-grow py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all border flex items-center justify-center gap-2 group/btn ${isAdmin
@@ -188,7 +188,7 @@ const CatalogoView = () => {
                   <div className={`border-none outline-none rounded-[2.5rem] p-10 shadow-2xl max-w-lg w-full ${isAdmin ? 'bg-white' : 'bg-[#0d1117]'}`}>
                     <div className="flex justify-between items-start mb-6">
                       <div>
-                        <span className="text-blue-500 text-[10px] font-black uppercase tracking-widest block mb-2">Ficha Técnica Egyven</span>
+                        <span className="text-blue-500 text-[10px] font-black uppercase tracking-widest block mb-2">Ficha Técnica TECNOVA</span>
                         <h3 className={`text-3xl font-black italic ${isAdmin ? 'text-slate-900' : 'text-white'}`}>{prod.nombre}</h3>
                       </div>
                       <form method="dialog">

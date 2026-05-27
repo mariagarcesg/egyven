@@ -1,4 +1,4 @@
-export const productosEGYVEN = [
+export const productosTECNOVA = [
   {
     id: 1,
     nombre: "Procesador Intel Core i9-13900K",

@@ -112,7 +112,7 @@ const Nosotros = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-16 items-center">
 
           <div className="flex-1">
-            <span className="text-blue-500 text-[10px] font-black uppercase tracking-[0.4em] mb-4 block">EGYVEN Technology</span>
+            <span className="text-blue-500 text-[10px] font-black uppercase tracking-[0.4em] mb-4 block">TECNOVA Technology</span>
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-8 italic">
               CUADROS DE <br /> <span className="text-blue-500">INNOVACIÓN</span>
             </h1>
