@@ -14,6 +14,8 @@ router.get('/ordenes', controlador.obtenerOrdenesServicio);
 router.post('/ordenes', controlador.crearOrden);
 // GET tecnicos
 router.get('/tecnicos', controlador.obtenerTecnicos);
+// PUT actualizar orden
+router.put('/ordenes/:id', controlador.actualizarOrden);
 
 // GET repuestos utilizados
 router.get('/repuestos', controlador.obtenerRepuestos);

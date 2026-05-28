@@ -91,6 +91,7 @@ exports.obtenerEquipos = async (req, res) => {
     const query = `
       SELECT e.id,
              e.cliente_id,
+             e.estado,
              CONCAT(c.nombre, ' ', c.apellido) AS cliente_nombre,
              e.categoria,
              e.marca,
@@ -142,7 +143,7 @@ exports.obtenerRepuestos = async (req, res) => {
 
 // Crear nuevo equipo
 exports.crearEquipo = async (req, res) => {
-  const { cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha } = req.body;
+  const { cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha, estado } = req.body;
   console.log('crearEquipo body:', req.body);
   // Validación básica
   const missing = [];
@@ -156,9 +157,9 @@ exports.crearEquipo = async (req, res) => {
     return res.status(400).json({ error: 'Campos faltantes', missing });
   }
   try {
-    const query = `INSERT INTO equipos_reparacion (cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-    const [result] = await db.query(query, [cliente_id || null, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha]);
-    const [rows] = await db.query('SELECT id, cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha_registro FROM equipos_reparacion WHERE id = ?', [result.insertId]);
+    const query = `INSERT INTO equipos_reparacion (cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha_registro, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const [result] = await db.query(query, [cliente_id || null, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha, estado != null ? estado : 0]);
+    const [rows] = await db.query('SELECT id, cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha_registro, estado FROM equipos_reparacion WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error crearEquipo:', error);
@@ -169,12 +170,12 @@ exports.crearEquipo = async (req, res) => {
 // Actualizar equipo por id
 exports.actualizarEquipo = async (req, res) => {
   const { id } = req.params;
-  const { cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso } = req.body;
+  const { cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, estado } = req.body;
   try {
-    const query = `UPDATE equipos_reparacion SET cliente_id = ?, categoria = ?, marca = ?, modelo = ?, numero_serie = ?, detalles_ingreso = ? WHERE id = ?`;
-    const [result] = await db.query(query, [cliente_id || null, categoria, marca, modelo, numero_serie, detalles_ingreso, id]);
+    const query = `UPDATE equipos_reparacion SET cliente_id = ?, categoria = ?, marca = ?, modelo = ?, numero_serie = ?, detalles_ingreso = ?, estado = ? WHERE id = ?`;
+    const [result] = await db.query(query, [cliente_id || null, categoria, marca, modelo, numero_serie, detalles_ingreso, estado != null ? estado : 0, id]);
     if (result.affectedRows > 0) {
-      const [rows] = await db.query('SELECT id, cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha_registro FROM equipos_reparacion WHERE id = ?', [id]);
+      const [rows] = await db.query('SELECT id, cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha_registro, estado FROM equipos_reparacion WHERE id = ?', [id]);
       return res.status(200).json(rows[0]);
     }
     res.status(404).json({ error: 'Equipo no encontrado' });
@@ -235,6 +236,30 @@ exports.crearOrden = async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error crearOrden:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Actualizar orden de servicio por id
+exports.actualizarOrden = async (req, res) => {
+  const { id } = req.params;
+  const { equipo_id, tecnico_id, fecha_ingreso, diagnostico_interno, estado, mano_obra, costo_repuestos, total } = req.body;
+  // map common frontend estados to DB ENUM literals if necessary
+  const estadoMap = {
+    'Pendiente': 'Recibido',
+    'En Proceso': 'En Revision',
+    'Entregado': 'Entregado'
+  };
+  const dbEstado = (estado && estadoMap[estado]) ? estadoMap[estado] : estado;
+
+  try {
+    const query = `UPDATE ordenes_servicio SET equipo_id = ?, tecnico_id = ?, fecha_ingreso = ?, diagnostico_interno = ?, estado = ?, mano_obra = ?, costo_repuestos = ?, total_pagar = ? WHERE id = ?`;
+    const [result] = await db.query(query, [equipo_id, tecnico_id, fecha_ingreso, diagnostico_interno || null, dbEstado, mano_obra || 0, costo_repuestos || 0, total || 0, id]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Orden no encontrada' });
+    const [rows] = await db.query(`SELECT o.id, o.equipo_id, CONCAT(e.marca, ' ', e.modelo) AS equipo_nombre, o.tecnico_id, CONCAT(t.nombre, ' ', t.apellido) AS tecnico_nombre, o.fecha_ingreso, o.estado, o.mano_obra, o.costo_repuestos, o.total_pagar AS total FROM ordenes_servicio o LEFT JOIN equipos_reparacion e ON o.equipo_id = e.id LEFT JOIN usuarios t ON o.tecnico_id = t.id WHERE o.id = ?`, [id]);
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error actualizarOrden:', error);
     res.status(500).json({ error: error.message });
   }
 };
