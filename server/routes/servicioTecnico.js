@@ -10,6 +10,10 @@ router.post('/clientes', controlador.crearCliente);
 
 // GET /api/servicio-tecnico/ordenes
 router.get('/ordenes', controlador.obtenerOrdenesServicio);
+// POST crear orden de servicio
+router.post('/ordenes', controlador.crearOrden);
+// GET tecnicos
+router.get('/tecnicos', controlador.obtenerTecnicos);
 
 // GET /api/servicio-tecnico/equipos
 router.get('/equipos', controlador.obtenerEquipos);

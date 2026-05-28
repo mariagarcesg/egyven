@@ -3,7 +3,15 @@ import Navbar from '../../components/layout/Navbar.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 
 const FacturacionView = () => {
-    const [activeTab, setActiveTab] = useState('ordenes');
+    const getInitialTab = () => {
+        try {
+            const t = localStorage.getItem('facturacion.activeTab');
+            return t || 'ordenes';
+        } catch (e) {
+            return 'ordenes';
+        }
+    };
+    const [activeTab, setActiveTab] = useState(getInitialTab);
     const [ordenes, setOrdenes] = useState([]);
     const [facturas, setFacturas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -38,6 +46,15 @@ const FacturacionView = () => {
             fetchOrdenes();
         } else if (activeTab === 'facturas') {
             fetchFacturas(); // <--- LLAMADA: Cargar facturas al cambiar de pestaña
+        }
+    }, [activeTab]);
+
+    // persist active tab so it survives page refresh
+    useEffect(() => {
+        try {
+            localStorage.setItem('facturacion.activeTab', activeTab);
+        } catch (e) {
+            // ignore
         }
     }, [activeTab]);
 
