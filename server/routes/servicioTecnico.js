@@ -19,6 +19,10 @@ router.put('/ordenes/:id', controlador.actualizarOrden);
 
 // GET repuestos utilizados
 router.get('/repuestos', controlador.obtenerRepuestos);
+// POST crear repuesto utilizado
+router.post('/repuestos', controlador.crearRepuesto);
+// PUT actualizar repuesto utilizado
+router.put('/repuestos/:id', controlador.actualizarRepuesto);
 
 // GET /api/servicio-tecnico/equipos
 router.get('/equipos', controlador.obtenerEquipos);
