@@ -110,6 +110,36 @@ exports.obtenerEquipos = async (req, res) => {
   }
 };
 
+// Obtener repuestos utilizados
+exports.obtenerRepuestos = async (req, res) => {
+  try {
+    const query = `
+      SELECT r.id,
+             r.orden_servicio_id,
+             r.producto_id,
+             p.nombre AS producto_nombre,
+             r.cantidad,
+             r.precio_venta_momento,
+             o.equipo_id AS equipo_id,
+             CONCAT(e.marca, ' ', e.modelo) AS equipo_nombre
+      FROM repuestos_utilizados r
+      LEFT JOIN productos p ON r.producto_id = p.id
+      LEFT JOIN ordenes_servicio o ON r.orden_servicio_id = o.id
+      LEFT JOIN equipos_reparacion e ON o.equipo_id = e.id
+      ORDER BY r.id DESC
+    `;
+    const [rows] = await db.query(query);
+    res.status(200).json(rows.map(row => ({
+      ...row,
+      producto_nombre: row.producto_nombre || `#${row.producto_id}`,
+      equipo_nombre: row.equipo_nombre || (row.equipo_id ? `#${row.equipo_id}` : null)
+    })));
+  } catch (error) {
+    console.error('Error obtenerRepuestos:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Crear nuevo equipo
 exports.crearEquipo = async (req, res) => {
   const { cliente_id, categoria, marca, modelo, numero_serie, detalles_ingreso, fecha } = req.body;

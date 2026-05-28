@@ -15,6 +15,9 @@ router.post('/ordenes', controlador.crearOrden);
 // GET tecnicos
 router.get('/tecnicos', controlador.obtenerTecnicos);
 
+// GET repuestos utilizados
+router.get('/repuestos', controlador.obtenerRepuestos);
+
 // GET /api/servicio-tecnico/equipos
 router.get('/equipos', controlador.obtenerEquipos);
 
