@@ -6,13 +6,47 @@ import { useNavigate } from 'react-router-dom';
 const ServicioTecnico = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('clientes');
+  const getInitialTab = () => {
+    try {
+      const t = localStorage.getItem('servicioTecnico.activeTab');
+      return t || 'clientes';
+    } catch (e) {
+      return 'clientes';
+    }
+  };
+
+  const fetchTecnicos = async () => {
+    try {
+      const res = await fetch('/api/servicio-tecnico/tecnicos');
+      if (!res.ok) throw new Error('Error al obtener técnicos');
+      const data = await res.json();
+      setTecnicos(data || []);
+    } catch (err) {
+      // fallback to general usuarios endpoint and try to filter by role if possible
+      try {
+        const r2 = await fetch('/api/usuarios');
+        if (r2.ok) {
+          const all = await r2.json();
+          const filtered = (Array.isArray(all) ? all : []).filter(u => u.rol_id === 2 || u.role === 2 || u.rol === 2);
+          setTecnicos(filtered);
+        } else {
+          setTecnicos([]);
+        }
+      } catch (e) {
+        setTecnicos([]);
+      }
+    }
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [clients, setClients] = useState([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [clientsError, setClientsError] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [tecnicos, setTecnicos] = useState([]);
+  const [orderForm, setOrderForm] = useState({ equipo_id: '', tecnico_id: '', fecha_ingreso: '', diagnostico_interno: '', estado: 'Recibido', mano_obra: 0, costo_repuestos: 0, total: 0 });
   const [equipos, setEquipos] = useState([]);
   const [loadingEquipos, setLoadingEquipos] = useState(false);
   const [equiposError, setEquiposError] = useState(null);
@@ -42,8 +76,22 @@ const ServicioTecnico = () => {
 
   useEffect(() => {
     if (activeTab === 'clientes') fetchClients();
-    if (activeTab === 'servicios') fetchOrders();
+    if (activeTab === 'servicios') {
+      fetchOrders();
+      fetchTecnicos();
+      // ensure equipos available for select
+      fetchEquipos();
+    }
     if (activeTab === 'equipos') fetchEquipos();
+  }, [activeTab]);
+
+  // persist active tab so it survives page refresh
+  useEffect(() => {
+    try {
+      localStorage.setItem('servicioTecnico.activeTab', activeTab);
+    } catch (e) {
+      // ignore storage errors
+    }
   }, [activeTab]);
 
   const fetchOrders = async () => {
@@ -183,6 +231,20 @@ const ServicioTecnico = () => {
     setEquipForm({ cliente_id: '', categoria: 'Periféricos', marca: '', modelo: '', numero_serie: '', detalles_ingreso: '', fecha: '' });
   };
 
+  const openCreateOrderModal = async () => {
+    // ensure equipos and tecnicos loaded
+    if (!equipos || equipos.length === 0) await fetchEquipos();
+    if (!tecnicos || tecnicos.length === 0) await fetchTecnicos();
+    const today = new Date().toISOString().slice(0, 10);
+    setOrderForm({ equipo_id: '', tecnico_id: '', fecha_ingreso: today, diagnostico_interno: '', estado: 'Pendiente', mano_obra: 0, costo_repuestos: 0, total: 0 });
+    setIsCreateOrderOpen(true);
+  };
+
+  const closeCreateOrderModal = () => {
+    setIsCreateOrderOpen(false);
+    setOrderForm({ equipo_id: '', tecnico_id: '', fecha_ingreso: '', diagnostico_interno: '', estado: 'Pendiente', mano_obra: 0, costo_repuestos: 0, total: 0 });
+  };
+
   const handleCreateEquipo = async (e) => {
     e.preventDefault();
     try {
@@ -211,6 +273,31 @@ const ServicioTecnico = () => {
       }
     } catch (err) {
       alert('No se pudo crear equipo: ' + (err.message || 'error'));
+    }
+  };
+
+  const handleCreateOrder = async (e) => {
+    e.preventDefault();
+    try {
+      const mano = Number(orderForm.mano_obra) || 0;
+      const repuestos = Number(orderForm.costo_repuestos) || 0;
+      const total = mano + repuestos;
+      const payload = { ...orderForm, mano_obra: mano, costo_repuestos: repuestos, total };
+      const res = await fetch('/api/servicio-tecnico/ordenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Error al crear orden');
+      }
+      const created = await res.json();
+      setOrders(prev => [created, ...prev]);
+      showNotification('Orden creada con éxito', 'success');
+      closeCreateOrderModal();
+    } catch (err) {
+      alert('No se pudo crear orden: ' + (err.message || 'error'));
     }
   };
 
@@ -254,6 +341,24 @@ const ServicioTecnico = () => {
     }
     setUser(JSON.parse(storedUser));
   }, [navigate]);
+
+  const renderEstadoBadge = (estado) => {
+    const e = (estado || '').toString().toLowerCase();
+    // Handle frontend labels and DB enum literals
+    if (e.includes('pend') || e.includes('recib')) {
+      return <span className="bg-yellow-100 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pendiente</span>;
+    }
+    if (e.includes('proce') || e.includes('revision') || e.includes('esperando') || e.includes('listo')) {
+      return <span className="bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">En Proceso</span>;
+    }
+    if (e.includes('entreg')) {
+      return <span className="bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Entregado</span>;
+    }
+    if (e.includes('no reparable') || e.includes('noreparable')) {
+      return <span className="bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">No Reparable</span>;
+    }
+    return <span className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{estado}</span>;
+  };
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
@@ -342,7 +447,10 @@ const ServicioTecnico = () => {
 
             {activeTab === 'servicios' && (
               <section>
-                <h2 className="text-2xl font-bold mb-4">Servicios</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold">Servicios</h2>
+                  <button onClick={openCreateOrderModal} className="bg-green-600 text-white px-4 py-2 rounded-lg">+ Crear Orden</button>
+                </div>
                 {loadingOrders && <p className="text-slate-600">Cargando órdenes...</p>}
                 {ordersError && <p className="text-red-600">{ordersError}</p>}
 
@@ -364,7 +472,7 @@ const ServicioTecnico = () => {
                             <td className="px-8 py-4 text-slate-700">{o.equipo_nombre || o.equipo_id}</td>
                             <td className="px-8 py-4 text-slate-700">{o.tecnico_nombre || o.tecnico_id}</td>
                             <td className="px-8 py-4 text-slate-600">{o.fecha_ingreso}</td>
-                            <td className="px-8 py-4 text-slate-600">{o.estado}</td>
+                            <td className="px-8 py-4 text-slate-600">{renderEstadoBadge(o.estado)}</td>
                             <td className="px-8 py-4 text-center">
                               <button onClick={() => showNotification('Editar orden no implementado', 'info')} className="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors mr-2">Editar</button>
                               <button onClick={() => showNotification('Eliminar orden no implementado', 'info')} className="text-red-600 hover:text-red-800 font-bold text-[10px] uppercase tracking-widest bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors">Eliminar</button>
@@ -545,6 +653,89 @@ const ServicioTecnico = () => {
               <div className="p-4 border-t flex justify-end gap-3 bg-slate-50 rounded-b">
                 <button type="button" onClick={closeEquipModal} className="px-4 py-2 rounded bg-slate-200">Cancelar</button>
                 <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">Crear Equipo</button>
+              </div>
+            </form>
+          </div>
+        </>
+      )}
+      {isCreateOrderOpen && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/40" onClick={closeCreateOrderModal} />
+          <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-8">
+            <form onSubmit={handleCreateOrder} className="mt-8 w-full max-w-xl bg-white rounded-2xl overflow-y-auto p-6 sm:p-8 max-h-[92vh]">
+              <div className="p-4 pb-6 relative border-b">
+                <h3 className="text-xl font-bold">Crear Orden de Servicio</h3>
+                <button type="button" onClick={closeCreateOrderModal} className="absolute top-4 right-4 bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200">✕</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Equipo</label>
+                  <select value={orderForm.equipo_id} onChange={(e) => setOrderForm(prev => ({...prev, equipo_id: e.target.value}))} className="px-3 py-2 border rounded w-full">
+                    <option value="">Seleccione equipo...</option>
+                    {equipos.map(eq => (
+                      <option key={eq.id} value={eq.id}>{eq.cliente_nombre ? `${eq.cliente_nombre} — ` : ''}{eq.marca} {eq.modelo}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Técnico</label>
+                  <select value={orderForm.tecnico_id} onChange={(e) => setOrderForm(prev => ({...prev, tecnico_id: e.target.value}))} className="px-3 py-2 border rounded w-full">
+                    <option value="">Seleccione técnico...</option>
+                    {tecnicos.map(t => (<option key={t.id} value={t.id}>{t.nombre} {t.apellido}</option>))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Fecha de Ingreso</label>
+                  <input readOnly value={orderForm.fecha_ingreso} className="px-3 py-2 border rounded w-full bg-slate-50" />
+                </div>
+
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Detalles (Diagnóstico interno)</label>
+                  <textarea value={orderForm.diagnostico_interno} onChange={(e) => setOrderForm(prev => ({...prev, diagnostico_interno: e.target.value}))} className="px-3 py-2 border rounded w-full" rows={4} />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Estado</label>
+                  <select value={orderForm.estado} onChange={(e) => setOrderForm(prev => ({...prev, estado: e.target.value}))} className="px-3 py-2 border rounded w-full">
+                    <option value="Recibido">Recibido</option>
+                    <option value="En Revision">En Revision</option>
+                    <option value="Esperando Repuesto">Esperando Repuesto</option>
+                    <option value=" Listo para entrega"> Listo para entrega</option>
+                    <option value="Entregado">Entregado</option>
+                    <option value="No Reparable">No Reparable</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Precio Mano de Obra</label>
+                  <input type="number" min="0" step="0.01" value={orderForm.mano_obra} onChange={(e) => {
+                    const val = e.target.value;
+                    const mano = Number(val) || 0;
+                    setOrderForm(prev => ({...prev, mano_obra: mano, total: mano + Number(prev.costo_repuestos || 0)}));
+                  }} className="px-3 py-2 border rounded" />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Costo Repuestos</label>
+                  <input type="number" min="0" step="0.01" value={orderForm.costo_repuestos} onChange={(e) => {
+                    const val = e.target.value;
+                    const rep = Number(val) || 0;
+                    setOrderForm(prev => ({...prev, costo_repuestos: rep, total: rep + Number(prev.mano_obra || 0)}));
+                  }} className="px-3 py-2 border rounded" />
+                </div>
+
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-slate-600 mb-1">Total a pagar</label>
+                  <input readOnly value={orderForm.total} className="px-3 py-2 border rounded w-full bg-slate-50" />
+                </div>
+              </div>
+
+              <div className="p-4 border-t flex justify-end gap-3 bg-slate-50 rounded-b">
+                <button type="button" onClick={closeCreateOrderModal} className="px-4 py-2 rounded bg-slate-200">Cancelar</button>
+                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white">Crear Orden</button>
               </div>
             </form>
           </div>
