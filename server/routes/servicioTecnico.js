@@ -14,6 +14,15 @@ router.get('/ordenes', controlador.obtenerOrdenesServicio);
 router.post('/ordenes', controlador.crearOrden);
 // GET tecnicos
 router.get('/tecnicos', controlador.obtenerTecnicos);
+// PUT actualizar orden
+router.put('/ordenes/:id', controlador.actualizarOrden);
+
+// GET repuestos utilizados
+router.get('/repuestos', controlador.obtenerRepuestos);
+// POST crear repuesto utilizado
+router.post('/repuestos', controlador.crearRepuesto);
+// PUT actualizar repuesto utilizado
+router.put('/repuestos/:id', controlador.actualizarRepuesto);
 
 // GET /api/servicio-tecnico/equipos
 router.get('/equipos', controlador.obtenerEquipos);

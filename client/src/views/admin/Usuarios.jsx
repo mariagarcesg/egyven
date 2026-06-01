@@ -87,10 +87,10 @@ const UsuariosView = () => {
                   {filteredUsuarios.map((user) => (
                     <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-4 font-mono text-slate-400">#{user.id}</td>
-                      <td className="px-8 py-4 font-bold text-slate-700">{user.username}</td>
+                      <td className="px-8 py-4 font-bold text-slate-700 bg-slate-200">{user.username}</td>
                       <td className="px-8 py-4 text-slate-600">{user.nombre || '-'}</td>
                       <td className="px-8 py-4 text-slate-600">{user.apellido || '-'}</td>
-                      <td className="px-8 py-4 text-center">
+                      <td className="px-8 py-4 text-center bg-blue-50">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${user.status === 1 || user.status === '1' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                           {user.status === 1 || user.status === '1' ? 'Activo' : 'Inactivo'}
                         </span>

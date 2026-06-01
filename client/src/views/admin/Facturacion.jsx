@@ -293,9 +293,9 @@ const FacturacionView = () => {
         ordenes.map(orden => (
             <tr key={orden.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 text-sm font-bold text-slate-700">#{orden.id}</td>
-                <td className="px-6 py-4 text-sm font-bold text-slate-900">{orden.nombre} {orden.apellido}</td>
+                <td className="px-6 py-4 text-sm font-bold text-slate-900 bg-blue-200">{orden.nombre} {orden.apellido}</td>
                 <td className="px-6 py-4 text-sm text-slate-500">{new Date(orden.fecha_orden).toLocaleDateString()}</td>
-                <td className="px-6 py-4 text-sm font-bold text-blue-600">${Number(orden.total).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-blue-600 bg-green-100">${Number(orden.total).toFixed(2)}</td>
                 <td className="px-6 py-4">{getStatusBadge(orden.estatus_id)}</td>
                 
                 {/* CELDA DE ACCIONES CORREGIDA */}
@@ -380,7 +380,7 @@ const FacturacionView = () => {
                 </td>
                 
                 {/* MOSTRAR NOMBRE DEL CLIENTE/USUARIO */}
-                <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                <td className="px-6 py-4 text-sm font-bold text-slate-900 bg-blue-100">
                     {factura.nombre_cliente || "Usuario no encontrado"}
                 </td>
 
@@ -392,7 +392,7 @@ const FacturacionView = () => {
                     ${Number(factura.total).toFixed(2)}
                 </td>
 
-                <td className="px-6 py-4 text-sm font-bold text-green-600">
+                <td className="px-6 py-4 text-sm font-bold text-green-600 bg-green-100">
                     ${Number(factura.total_pagado).toFixed(2)}
                 </td>
                 <td className="px-6 py-4">{getStatusBadge(factura.estatus_id)}</td>

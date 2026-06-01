@@ -140,6 +140,66 @@ router.get('/metodos', async (req, res) => {
     }
 });
 
+// Obtener top 3 productos más pedidos (por cantidad sumada en detalle_factura)
+router.get('/top-productos', async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT d.producto_id, p.nombre AS nombre_producto, SUM(d.cantidad) AS total_cantidad
+            FROM detalle_factura d
+            JOIN productos p ON d.producto_id = p.id
+            GROUP BY d.producto_id
+            ORDER BY total_cantidad DESC
+            LIMIT 3
+        `);
+        res.json(Array.isArray(rows) ? rows.map(r => ({
+            producto_id: r.producto_id,
+            nombre: r.nombre_producto,
+            total: Number(r.total_cantidad)
+        })) : []);
+    } catch (error) {
+        console.error('ERROR obteniendo top productos:', error);
+        res.status(500).json({ message: 'Error al obtener top productos' });
+    }
+});
+
+// Obtener ventas por dia (últimos N días, por defecto 30)
+router.get('/ventas-ultimos-dias', async (req, res) => {
+    const days = parseInt(req.query.days, 10) || 30;
+    try {
+        const [rows] = await db.query(`
+            SELECT DATE(fecha_venta) AS fecha, SUM(COALESCE(total_pagado,0)) AS total_pagado_sum
+            FROM factura
+            WHERE fecha_venta >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+            GROUP BY DATE(fecha_venta)
+            ORDER BY DATE(fecha_venta) ASC
+        `, [days]);
+
+        res.json(Array.isArray(rows) ? rows.map(r => ({ fecha: r.fecha, total: Number(r.total_pagado_sum) })) : []);
+    } catch (error) {
+        console.error('ERROR obteniendo ventas por dia:', error);
+        res.status(500).json({ message: 'Error al obtener ventas por dia' });
+    }
+});
+
+// Obtener cantidad de equipos registrados por mes (equipos_reparacion.fecha_registro)
+router.get('/equipos-ingresos-por-mes', async (req, res) => {
+    const months = parseInt(req.query.months, 10) || 12;
+    try {
+        const [rows] = await db.query(`
+            SELECT DATE_FORMAT(fecha_registro, '%Y-%m') AS month, COUNT(*) AS count
+            FROM equipos_reparacion
+            WHERE fecha_registro IS NOT NULL AND fecha_registro >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        `, [months]);
+
+        res.json(Array.isArray(rows) ? rows.map(r => ({ month: r.month, count: Number(r.count) })) : []);
+    } catch (error) {
+        console.error('ERROR obteniendo equipos por mes:', error);
+        res.status(500).json({ message: 'Error al obtener equipos por mes' });
+    }
+});
+
 // Registrar un pago para una factura
 router.post('/pagos', async (req, res) => {
     const { factura_id, numero_factura, id_metodo, monto, referencia, fecha_pago } = req.body;
