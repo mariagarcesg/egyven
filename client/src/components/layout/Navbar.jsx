@@ -27,28 +27,28 @@ const Navbar = () => {
     navigate('/');
   };
 
+  const isRole1 = user?.rol_id === 1;
   const isAdmin = user?.rol_id === 1 || user?.rol_id === 4;
 
   const getLinkClass = (path) => {
     const isActive = location.pathname === path;
-    if (isAdmin) {
-      return `text-[10px] font-black uppercase tracking-widest transition-all ${
-        isActive ? 'text-blue-600' : 'text-slate-600 hover:text-blue-500'
-      }`;
+    if (isRole1) {
+      return `text-[10px] font-black uppercase tracking-widest transition-all ${isActive ? 'text-white' : 'text-white hover:text-blue-400'}`;
     }
-    return `text-[10px] font-black uppercase tracking-widest transition-all ${
-      isActive ? 'text-blue-500' : 'text-white hover:text-blue-400'
-    }`;
+    if (isAdmin) {
+      return `text-[10px] font-black uppercase tracking-widest transition-all ${isActive ? 'text-blue-600' : 'text-slate-600 hover:text-blue-500'}`;
+    }
+    return `text-[10px] font-black uppercase tracking-widest transition-all ${isActive ? 'text-blue-500' : 'text-white hover:text-blue-400'}`;
   };
 
   return (
     <>
-    <nav className={`fixed top-0 w-full z-[100] backdrop-blur-xl border-b transition-colors duration-500 ${isAdmin ? 'bg-white/90 border-slate-200' : 'bg-[#05070a]/80 border-white/5'}`}>
+    <nav className={`fixed top-0 w-full z-[100] backdrop-blur-xl border-b transition-colors duration-500 ${isRole1 ? 'bg-slate-800/95 border-slate-700' : isAdmin ? 'bg-white/90 border-slate-200' : 'bg-[#05070a]/80 border-white/5'}`}>
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between flex-wrap">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(isAdmin ? '/principal' : '/')}>
           <div className="w-8 h-8 bg-blue-800 rounded-lg flex items-center justify-center font-black text-white italic">T</div>
-          <span className={`text-xl font-black tracking-tighter ${isAdmin ? 'text-slate-900' : 'text-white'}`}>TEC<span className="text-blue-600">NOVA</span></span>
+          <span className={`text-xl font-black tracking-tighter ${isRole1 ? 'text-white' : isAdmin ? 'text-slate-900' : 'text-white'}`}>TEC<span className="text-blue-600">NOVA</span></span>
         </div>
         {/* Links Centrales */}
         <div className="hidden lg:flex items-center gap-8">
@@ -113,7 +113,7 @@ const Navbar = () => {
               {/* Botón Carrito */}
               <button 
                 onClick={toggleCart}
-                className={`relative p-2 rounded-xl transition-colors ${isAdmin ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-300 hover:bg-white/10'}`}
+                className={`relative p-2 rounded-xl transition-colors ${isRole1 ? 'text-white hover:bg-white/5' : isAdmin ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-300 hover:bg-white/10'}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -125,20 +125,20 @@ const Navbar = () => {
                 )}
               </button>
               <div 
-                className={`flex items-center gap-3 cursor-pointer group px-3 py-2 -ml-3 rounded-xl transition-colors ${isAdmin ? 'hover:bg-slate-50' : 'hover:bg-white/5'}`}
+                className={`flex items-center gap-3 cursor-pointer group px-3 py-2 -ml-3 rounded-xl transition-colors ${isRole1 ? 'hover:bg-white/5' : isAdmin ? 'hover:bg-slate-50' : 'hover:bg-white/5'}`}
                 onClick={() => navigate('/perfil')}
                 title="Ir a mi perfil"
               >
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 text-[10px] font-black italic group-hover:bg-blue-500/20 transition-colors">
                   {(user.username || user.nombre || 'U').charAt(0).toUpperCase()}
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors max-w-[90px] md:max-w-[140px] truncate ${isAdmin ? 'text-slate-900 group-hover:text-blue-600' : 'text-white group-hover:text-blue-400'}`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors max-w-[90px] md:max-w-[140px] truncate ${isRole1 ? 'text-white group-hover:text-blue-400' : isAdmin ? 'text-slate-900 group-hover:text-blue-600' : 'text-white group-hover:text-blue-400'}`}>
                   {user.username || user.nombre || 'Usuario'}
                 </span>
               </div>
               <button 
                 onClick={handleLogout}
-                className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isAdmin ? 'text-slate-400 hover:text-red-500' : 'text-slate-500 hover:text-red-500'}`}
+                className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isRole1 ? 'text-white hover:text-red-400' : isAdmin ? 'text-slate-400 hover:text-red-500' : 'text-slate-500 hover:text-red-500'}`}
               >
                 Salir
               </button>
@@ -154,7 +154,7 @@ const Navbar = () => {
     </nav>
     {/* Menú móvil */}
     {mobileOpen && (
-    <div className="md:hidden fixed inset-x-0 top-20 z-[90] bg-[#05070a]/95 backdrop-blur-sm border-t border-white/5 max-h-[calc(100vh-5rem)] overflow-auto">
+    <div className={`md:hidden fixed inset-x-0 top-20 z-[90] ${isRole1 ? 'bg-slate-800/95' : 'bg-[#05070a]/95'} backdrop-blur-sm border-t border-white/5 max-h-[calc(100vh-5rem)] overflow-auto`}>
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-4">
           {isAdmin ? (
             <>

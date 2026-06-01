@@ -207,8 +207,8 @@ const InventarioView = () => {
                         )}
 
                         {!loading && !error && (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-200">
+                            <div className="overflow-x-auto px-4">
+                                <table className="w-full table-auto divide-y divide-slate-200">
                                     <thead className="bg-slate-50">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
@@ -224,12 +224,12 @@ const InventarioView = () => {
                                     <tbody className="bg-white divide-y divide-slate-100">
                                         {productos.map((p) => (
                                             <tr key={p.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{p.nombre}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.SKU || p.sku || '-'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.costo != null ? p.costo : '-'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.precio_venta != null ? p.precio_venta : '-'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.stock_actual != null ? p.stock_actual : '-'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-900">{p.nombre}</td>
+                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-700 bg-slate-200">{p.SKU || p.sku || '-'}</td>
+                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-700">{p.costo != null ? p.costo : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-700 bg-green-100">{p.precio_venta != null ? p.precio_venta : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-700">{p.stock_actual != null ? p.stock_actual : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-normal text-sm bg-blue-50">
                                                     {p.status == 1 || p.status === '1' ? (
                                                         <span className="text-green-600 font-medium">Disponible</span>
                                                     ) : (
