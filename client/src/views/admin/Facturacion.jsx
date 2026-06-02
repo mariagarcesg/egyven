@@ -43,6 +43,8 @@ const FacturacionView = () => {
     const [pagoReferencia, setPagoReferencia] = useState('');
     const [pagoMetodoId, setPagoMetodoId] = useState(null);
     const [pagoFecha, setPagoFecha] = useState('');
+    const [pagoMoneda, setPagoMoneda] = useState('USD');
+    const [pendienteCalculado, setPendienteCalculado] = useState(null);
     const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
     const [facturaToFinalize, setFacturaToFinalize] = useState(null);
 
@@ -450,6 +452,8 @@ const FacturacionView = () => {
                                 setPagoMonto('');
                                 setPagoReferencia('');
                                 setPagoMetodoId(null);
+                                setPagoMoneda('USD');
+                                setPendienteCalculado(null);
                                 setIsPagoModalOpen(true);
                             }}
                             className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-colors border ${factura.estatus_id === 5 ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'text-white bg-green-600 hover:bg-green-700 border-green-700'}`}
@@ -534,6 +538,14 @@ const FacturacionView = () => {
                                 </div>
 
                                 <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Moneda</label>
+                                    <select value={pagoMoneda} onChange={e => setPagoMoneda(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
+                                        <option value="USD">USD</option>
+                                        <option value="VES">VES</option>
+                                    </select>
+                                </div>
+
+                                <div>
                                     <label className="text-[10px] font-black uppercase text-slate-500">Método de Pago</label>
                                     <select value={pagoMetodoId || ''} onChange={e => setPagoMetodoId(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
                                         <option value="">-- Seleccione --</option>
@@ -561,16 +573,23 @@ const FacturacionView = () => {
                                 <div className="pt-4">
                                     <button
                                         onClick={async () => {
-                                            // validar
                                             if (!pagoMetodoId) return showNotification('Seleccione un método de pago', 'error');
                                             const montoNum = Number(pagoMonto);
                                             if (!montoNum || montoNum <= 0) return showNotification('Ingrese un monto válido', 'error');
+
+                                            let montoAGuardar;
+                                            if (pagoMoneda === 'VES' && tasa) {
+                                                if (pendienteCalculado === null) return showNotification('Presione Calcular antes de aplicar el pago en VES', 'error');
+                                                montoAGuardar = Number(pagoFactura.total) - pendienteCalculado;
+                                            } else {
+                                                montoAGuardar = montoNum;
+                                            }
 
                                             try {
                                                 const payload = {
                                                     factura_id: pagoFactura.id,
                                                     id_metodo: pagoMetodoId,
-                                                    monto: montoNum,
+                                                    monto: montoAGuardar,
                                                     referencia: pagoReferencia,
                                                     fecha_pago: pagoFecha || undefined
                                                 };
@@ -598,10 +617,27 @@ const FacturacionView = () => {
                                     >Aplicar</button>
                                 </div>
                             </div>
-                            <div className="p-4 border-t bg-slate-50 text-right">
-                                <div className="text-sm text-slate-600">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total) * tasa).toFixed(2)}</span>}</div>
-                                <div className="text-sm text-slate-600">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total_pagado) * tasa).toFixed(2)}</span>}</div>
-                                <div className="text-sm">Pendiente: <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total - pagoFactura.total_pagado) * tasa).toFixed(2)}</span>}</div>
+                            <div className="p-4 border-t bg-slate-50">
+                                <div className="text-sm text-slate-600 text-right">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total) * tasa).toFixed(2)}</span>}</div>
+                                <div className="text-sm text-slate-600 text-right">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total_pagado) * tasa).toFixed(2)}</span>}</div>
+                                <div className="text-sm text-right">
+                                    Pendiente:{' '}
+                                    {pendienteCalculado !== null
+                                        ? <span className={`font-black ${pendienteCalculado <= 0 ? 'text-green-600' : 'text-blue-600'}`}>${pendienteCalculado.toFixed(2)}</span>
+                                        : <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span>
+                                    }
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const montoNum = Number(pagoMonto) || 0;
+                                        const base = Number(pagoFactura.total) - Number(pagoFactura.total_pagado);
+                                        const descuento = pagoMoneda === 'VES' && tasa ? montoNum / tasa : montoNum;
+                                        setPendienteCalculado(base - descuento);
+                                    }}
+                                    className="mt-3 w-full border border-slate-300 text-slate-700 font-black text-[11px] uppercase tracking-widest py-2 rounded-md hover:bg-slate-100 transition-colors"
+                                >
+                                    Calcular
+                                </button>
                             </div>
                         </div>
                     </div>
