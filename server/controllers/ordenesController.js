@@ -171,14 +171,19 @@ exports.modificarDetalleOrden = async (req, res) => {
         return res.status(400).json({ error: 'Cantidad inválida' });
     }
     try {
-        // Obtener precio unitario para recalcular subtotal
-        const [rows] = await db.query('SELECT precio_unitario FROM detalle_orden WHERE id = ?', [id]);
+        const [rows] = await db.query('SELECT id_orden, id_producto, cantidad, precio_unitario FROM detalle_orden WHERE id = ?', [id]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Detalle de orden no encontrado' });
         }
-        const precio = rows[0].precio_unitario;
-        const nuevoSubtotal = precio * cantidad;
-        await db.query('UPDATE detalle_orden SET cantidad = ?, subtotal = ? WHERE id = ?', [cantidad, nuevoSubtotal, id]);
+        const { id_orden, id_producto, cantidad: cantidadAnterior } = rows[0];
+        const diferencia = cantidad - cantidadAnterior;
+
+        await db.query('UPDATE detalle_orden SET cantidad = ? WHERE id = ?', [cantidad, id]);
+        await db.query('UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?', [diferencia, id_producto]);
+
+        const [[{ nuevoTotal }]] = await db.query('SELECT SUM(subtotal) AS nuevoTotal FROM detalle_orden WHERE id_orden = ?', [id_orden]);
+        await db.query('UPDATE orden_compra SET total = ? WHERE id = ?', [nuevoTotal, id_orden]);
+
         res.status(200).json({ message: 'Detalle actualizado' });
     } catch (error) {
         console.error('Error al modificar detalle:', error);
