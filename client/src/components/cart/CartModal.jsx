@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext.jsx';
+import Notification from '../ui/Notification.jsx';
 
 const CartModal = () => {
   const { cartItems, isCartOpen, toggleCart, removeFromCart, updateQuantity, checkoutOrder } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [notification, setNotification] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
 
   if (!isCartOpen) return null;
@@ -19,7 +21,7 @@ const CartModal = () => {
     setIsProcessing(false);
     
     if (result.success) {
-      alert('¡Orden creada exitosamente! Gracias por su compra.');
+      setNotification({ message: '¡Orden creada exitosamente! Gracias por su compra.', type: 'success' });
     } else {
       setCheckoutError(result.message || 'Error desconocido.');
     }
@@ -27,6 +29,9 @@ const CartModal = () => {
 
   return (
     <>
+      {notification.message && (
+        <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'success' })} />
+      )}
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm transition-opacity"

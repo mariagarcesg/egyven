@@ -1,7 +1,8 @@
+require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+
 
 // Importar la conexión a la base de datos
 const db = require('./config/db');
@@ -24,6 +25,7 @@ const carritoRoutes = require('./routes/carrito');
 const ordenesRoutes = require('./routes/ordenes');
 const facturasRoutes = require('./routes/facturas');
 const servicioTecnicoRoutes = require('./routes/servicioTecnico');
+const comparadorRoutes = require('./routes/comparador');
 
 // Uso de Rutas
 app.use('/api/usuarios', usuariosRoutes);
@@ -32,6 +34,7 @@ app.use('/api/carrito', carritoRoutes);
 app.use('/api/ordenes', ordenesRoutes);
 app.use('/api/facturas', facturasRoutes);
 app.use('/api/servicio-tecnico', servicioTecnicoRoutes);
+app.use('/api/comparador', comparadorRoutes);
 
 // DEBUG: listar rutas registradas (solo en entorno de desarrollo)
 if (process.env.NODE_ENV !== 'production') {
