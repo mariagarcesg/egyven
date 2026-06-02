@@ -1,8 +1,10 @@
 import React from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
 import Notification from '../../components/ui/Notification.jsx';
+import useTasaCambio from '../../hooks/useTasaCambio.js';
 
 const ComparadorView = () => {
+  const tasa = useTasaCambio();
   const [running, setRunning] = React.useState(false);
   const [log, setLog] = React.useState('');
   const [competidores, setCompetidores] = React.useState([]);
@@ -304,12 +306,18 @@ const ComparadorView = () => {
                     return (
                       <tr key={p.id} className="border-b border-slate-800/40 hover:bg-slate-900/60 transition-colors text-slate-300">
                         <td className="px-4 py-3 font-medium text-slate-900 bg-blue-100">{producto.nombre || p.producto_id}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-900 bg-blue-100">${producto.precio_venta ?? '-'}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-900 bg-blue-100">
+                          <div>${producto.precio_venta ?? '-'}</div>
+                          {tasa && producto.precio_venta != null && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(producto.precio_venta) * tasa).toFixed(2)}</div>}
+                        </td>
                         <td className="px-4 py-3 text-blue-800 font-medium bg-gray-100">{p.plataforma}</td>
                         <td className="px-4 py-3 text-slate-800 max-w-xs truncate font-medium" title={p.nombre_competidor}>
                           {p.nombre_competidor || 'Cargando nombre del catálogo...'}
                         </td>
-                        <td className="px-4 py-3 font-bold text-white">${Number(p.precio_competencia).toFixed(2)}</td>
+                        <td className="px-4 py-3 font-bold text-white">
+                          <div>${Number(p.precio_competencia).toFixed(2)}</div>
+                          {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(p.precio_competencia) * tasa).toFixed(2)}</div>}
+                        </td>
                         <td className="px-4 py-3">{renderComparison(producto.precio_venta, p.precio_competencia)}</td>
                         <td className="px-4 py-3 text-slate-700 text-xs">{p.ultima_actualizacion ? new Date(p.ultima_actualizacion).toLocaleString() : '-'}</td>
                             <td className="px-4 py-3 text-right flex justify-end gap-2">

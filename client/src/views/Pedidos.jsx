@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar.jsx';
+import useTasaCambio from '../hooks/useTasaCambio.js';
 
 const PedidosView = () => {
+    const tasa = useTasaCambio();
     const [ordenes, setOrdenes] = useState([]);
     const [loading, setLoading] = useState(true);
     const user = JSON.parse(localStorage.getItem('user'));
@@ -124,7 +126,10 @@ const PedidosView = () => {
                                         <tr key={orden.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-5 text-sm font-bold text-slate-300">#{orden.id}</td>
                                             <td className="px-6 py-5 text-sm text-slate-400">{new Date(orden.fecha_orden).toLocaleDateString()}</td>
-                                            <td className="px-6 py-5 text-sm font-bold text-blue-400">${Number(orden.total).toFixed(2)}</td>
+                                            <td className="px-6 py-5 text-sm font-bold text-blue-400">
+                                                <div>${Number(orden.total).toFixed(2)}</div>
+                                                {tasa && <div className="text-xs text-slate-500 mt-0.5">Bs. {(Number(orden.total) * tasa).toFixed(2)}</div>}
+                                            </td>
                                             <td className="px-6 py-5">{getStatusBadge(orden.estatus_id)}</td>
                                             <td className="px-6 py-5 text-right">
                                                 <button 
@@ -194,6 +199,7 @@ const PedidosView = () => {
                                             <div className="text-right">
                                                 <div className="text-slate-400 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
                                                 <div className="text-blue-400 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
+                                                {tasa && <div className="text-slate-500 text-xs mt-0.5">Bs. {(Number(item.subtotal || (item.cantidad * item.precio_unitario)) * tasa).toFixed(2)}</div>}
                                             </div>
                                         </div>
                                     ))}
@@ -202,7 +208,10 @@ const PedidosView = () => {
                         </div>
                         <div className="p-6 border-t border-white/5 bg-white/5 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-400">Total</span>
-                            <span className="text-2xl font-black italic text-white">${Number(selectedOrden.total).toFixed(2)}</span>
+                            <div className="text-right">
+                                <div className="text-2xl font-black italic text-white">${Number(selectedOrden.total).toFixed(2)}</div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedOrden.total) * tasa).toFixed(2)}</div>}
+                            </div>
                         </div>
                     </div>
                 </div>

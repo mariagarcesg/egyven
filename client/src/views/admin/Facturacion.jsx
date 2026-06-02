@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { useCart } from '../../context/CartContext.jsx';
+import useTasaCambio from '../../hooks/useTasaCambio.js';
 
 const FacturacionView = () => {
     const getInitialTab = () => {
@@ -14,7 +15,10 @@ const FacturacionView = () => {
     const [activeTab, setActiveTab] = useState(getInitialTab);
     const [ordenes, setOrdenes] = useState([]);
     const [facturas, setFacturas] = useState([]);
+    const [tasas, setTasas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isTasaModalOpen, setIsTasaModalOpen] = useState(false);
+    const [tasaForm, setTasaForm] = useState({ moneda_origen: 'USD', moneda_destino: 'VES', tasa_cambio: '' });
 
     // Estado para modal de detalles de factura
     const [isFacturaModalOpen, setIsFacturaModalOpen] = useState(false);
@@ -30,6 +34,7 @@ const FacturacionView = () => {
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState(null);
     const { showNotification } = useCart();
+    const tasa = useTasaCambio();
     // Pago modal state
     const [isPagoModalOpen, setIsPagoModalOpen] = useState(false);
     const [metodos, setMetodos] = useState([]);
@@ -38,6 +43,8 @@ const FacturacionView = () => {
     const [pagoReferencia, setPagoReferencia] = useState('');
     const [pagoMetodoId, setPagoMetodoId] = useState(null);
     const [pagoFecha, setPagoFecha] = useState('');
+    const [pagoMoneda, setPagoMoneda] = useState('USD');
+    const [pendienteCalculado, setPendienteCalculado] = useState(null);
     const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
     const [facturaToFinalize, setFacturaToFinalize] = useState(null);
 
@@ -45,7 +52,9 @@ const FacturacionView = () => {
         if (activeTab === 'ordenes') {
             fetchOrdenes();
         } else if (activeTab === 'facturas') {
-            fetchFacturas(); // <--- LLAMADA: Cargar facturas al cambiar de pestaña
+            fetchFacturas();
+        } else if (activeTab === 'tasas') {
+            fetchTasas();
         }
     }, [activeTab]);
 
@@ -95,6 +104,19 @@ const FacturacionView = () => {
             setFacturas(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error al obtener facturas:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchTasas = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('http://localhost:5000/api/tasas');
+            const data = await res.json();
+            setTasas(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error al obtener tasas de cambio:', error);
         } finally {
             setLoading(false);
         }
@@ -264,6 +286,12 @@ const FacturacionView = () => {
                     >
                         Facturas
                     </button>
+                    <button
+                        onClick={() => setActiveTab('tasas')}
+                        className={`text-sm font-black uppercase tracking-widest transition-colors pb-4 -mb-4 border-b-2 ${activeTab === 'tasas' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                    >
+                        Tasas
+                    </button>
                 </div>
 
                 {activeTab === 'ordenes' && (
@@ -295,7 +323,10 @@ const FacturacionView = () => {
                 <td className="px-6 py-4 text-sm font-bold text-slate-700">#{orden.id}</td>
                 <td className="px-6 py-4 text-sm font-bold text-slate-900 bg-blue-200">{orden.nombre} {orden.apellido}</td>
                 <td className="px-6 py-4 text-sm text-slate-500">{new Date(orden.fecha_orden).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-blue-600 bg-green-100">${Number(orden.total).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-blue-600 bg-green-100">
+                        <div>${Number(orden.total).toFixed(2)}</div>
+                        {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(orden.total) * tasa).toFixed(2)}</div>}
+                    </td>
                 <td className="px-6 py-4">{getStatusBadge(orden.estatus_id)}</td>
                 
                 {/* CELDA DE ACCIONES CORREGIDA */}
@@ -389,11 +420,13 @@ const FacturacionView = () => {
                 </td>
 
                 <td className="px-6 py-4 text-sm font-bold text-blue-600">
-                    ${Number(factura.total).toFixed(2)}
+                    <div>${Number(factura.total).toFixed(2)}</div>
+                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(factura.total) * tasa).toFixed(2)}</div>}
                 </td>
 
                 <td className="px-6 py-4 text-sm font-bold text-green-600 bg-green-100">
-                    ${Number(factura.total_pagado).toFixed(2)}
+                    <div>${Number(factura.total_pagado).toFixed(2)}</div>
+                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(factura.total_pagado) * tasa).toFixed(2)}</div>}
                 </td>
                 <td className="px-6 py-4">{getStatusBadge(factura.estatus_id)}</td>
                 <td className="px-6 py-4 text-right">
@@ -419,6 +452,8 @@ const FacturacionView = () => {
                                 setPagoMonto('');
                                 setPagoReferencia('');
                                 setPagoMetodoId(null);
+                                setPagoMoneda('USD');
+                                setPendienteCalculado(null);
                                 setIsPagoModalOpen(true);
                             }}
                             className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-colors border ${factura.estatus_id === 5 ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'text-white bg-green-600 hover:bg-green-700 border-green-700'}`}
@@ -437,6 +472,56 @@ const FacturacionView = () => {
                     </div>
                 )}
 
+                {activeTab === 'tasas' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={() => {
+                                    setTasaForm({ moneda_origen: 'USD', moneda_destino: 'VES', tasa_cambio: '' });
+                                    setIsTasaModalOpen(true);
+                                }}
+                                className="text-sm font-black uppercase tracking-widest bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                            >
+                                Actualizar
+                            </button>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Moneda Origen</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Moneda Destino</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tasa</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic">Cargando tasas...</td>
+                                            </tr>
+                                        ) : tasas.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic">No hay tasas de cambio registradas.</td>
+                                            </tr>
+                                        ) : (
+                                            tasas.map((tasa, index) => (
+                                                <tr key={index} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{tasa.moneda_origen}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{tasa.moneda_destino}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">{Number(tasa.tasa_cambio).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">{new Date(tasa.fecha_registro).toLocaleString()}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Modal de Pago */}
                 {isPagoModalOpen && pagoFactura && (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -450,6 +535,14 @@ const FacturacionView = () => {
                                 <div>
                                     <label className="text-[10px] font-black uppercase text-slate-500">Número Factura</label>
                                     <div className="mt-2 text-sm font-bold">#{pagoFactura.id}</div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Moneda</label>
+                                    <select value={pagoMoneda} onChange={e => setPagoMoneda(e.target.value)} className="w-full mt-2 p-2 border rounded-md">
+                                        <option value="USD">USD</option>
+                                        <option value="VES">VES</option>
+                                    </select>
                                 </div>
 
                                 <div>
@@ -480,16 +573,23 @@ const FacturacionView = () => {
                                 <div className="pt-4">
                                     <button
                                         onClick={async () => {
-                                            // validar
                                             if (!pagoMetodoId) return showNotification('Seleccione un método de pago', 'error');
                                             const montoNum = Number(pagoMonto);
                                             if (!montoNum || montoNum <= 0) return showNotification('Ingrese un monto válido', 'error');
+
+                                            let montoAGuardar;
+                                            if (pagoMoneda === 'VES' && tasa) {
+                                                if (pendienteCalculado === null) return showNotification('Presione Calcular antes de aplicar el pago en VES', 'error');
+                                                montoAGuardar = Number(pagoFactura.total) - pendienteCalculado;
+                                            } else {
+                                                montoAGuardar = montoNum;
+                                            }
 
                                             try {
                                                 const payload = {
                                                     factura_id: pagoFactura.id,
                                                     id_metodo: pagoMetodoId,
-                                                    monto: montoNum,
+                                                    monto: montoAGuardar,
                                                     referencia: pagoReferencia,
                                                     fecha_pago: pagoFecha || undefined
                                                 };
@@ -517,10 +617,27 @@ const FacturacionView = () => {
                                     >Aplicar</button>
                                 </div>
                             </div>
-                            <div className="p-4 border-t bg-slate-50 text-right">
-                                <div className="text-sm text-slate-600">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span></div>
-                                <div className="text-sm text-slate-600">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span></div>
-                                <div className="text-sm">Pendiente: <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span></div>
+                            <div className="p-4 border-t bg-slate-50">
+                                <div className="text-sm text-slate-600 text-right">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total) * tasa).toFixed(2)}</span>}</div>
+                                <div className="text-sm text-slate-600 text-right">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total_pagado) * tasa).toFixed(2)}</span>}</div>
+                                <div className="text-sm text-right">
+                                    Pendiente:{' '}
+                                    {pendienteCalculado !== null
+                                        ? <span className={`font-black ${pendienteCalculado <= 0 ? 'text-green-600' : 'text-blue-600'}`}>${pendienteCalculado.toFixed(2)}</span>
+                                        : <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span>
+                                    }
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const montoNum = Number(pagoMonto) || 0;
+                                        const base = Number(pagoFactura.total) - Number(pagoFactura.total_pagado);
+                                        const descuento = pagoMoneda === 'VES' && tasa ? montoNum / tasa : montoNum;
+                                        setPendienteCalculado(base - descuento);
+                                    }}
+                                    className="mt-3 w-full border border-slate-300 text-slate-700 font-black text-[11px] uppercase tracking-widest py-2 rounded-md hover:bg-slate-100 transition-colors"
+                                >
+                                    Calcular
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -615,6 +732,7 @@ const FacturacionView = () => {
                                                 <div className="text-right">
                                                     <div className="text-slate-500 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
                                                     <div className="text-blue-600 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
+                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(item.subtotal || (item.cantidad * item.precio_unitario)) * tasa).toFixed(2)}</div>}
                                                 </div>
                                             </div>
                                         </div>
@@ -624,7 +742,10 @@ const FacturacionView = () => {
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Orden</span>
-                            <span className="text-2xl font-black italic text-slate-900">${Number(selectedOrden.total).toFixed(2)}</span>
+                            <div className="text-right">
+                                <div className="text-2xl font-black italic text-slate-900">${Number(selectedOrden.total).toFixed(2)}</div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedOrden.total) * tasa).toFixed(2)}</div>}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -674,6 +795,7 @@ const FacturacionView = () => {
                                                 <div className="text-right">
                                                     <div className="text-slate-500 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
                                                     <div className="text-blue-600 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
+                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(item.subtotal || (item.cantidad * item.precio_unitario)) * tasa).toFixed(2)}</div>}
                                                 </div>
                                             </div>
                                         </div>
@@ -683,11 +805,107 @@ const FacturacionView = () => {
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Factura</span>
-                            <span className="text-2xl font-black italic text-slate-900">${Number(selectedFactura.total).toFixed(2)}</span>
+                            <div className="text-right">
+                                <div className="text-2xl font-black italic text-slate-900">${Number(selectedFactura.total).toFixed(2)}</div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedFactura.total) * tasa).toFixed(2)}</div>}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
+            {/* Modal Nueva Tasa de Cambio */}
+            {isTasaModalOpen && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsTasaModalOpen(false)}></div>
+                    <div className="bg-white rounded-[1rem] shadow-2xl w-full max-w-md z-10 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="text-lg font-black">Nueva Tasa de Cambio</h3>
+                            <button onClick={() => setIsTasaModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center">✕</button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Moneda Origen</label>
+                                <select
+                                    value={tasaForm.moneda_origen}
+                                    onChange={e => setTasaForm(f => ({ ...f, moneda_origen: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                >
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Moneda Destino</label>
+                                <select
+                                    value={tasaForm.moneda_destino}
+                                    onChange={e => setTasaForm(f => ({ ...f, moneda_destino: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                >
+                                    <option value="VES">VES</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Tasa</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={tasaForm.tasa_cambio}
+                                    onChange={e => setTasaForm(f => ({ ...f, tasa_cambio: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Fecha</label>
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={new Date().toLocaleString()}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm bg-slate-50 text-slate-400 cursor-not-allowed"
+                                />
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    onClick={async () => {
+                                        if (!tasaForm.tasa_cambio || Number(tasaForm.tasa_cambio) <= 0) {
+                                            return showNotification('Ingrese una tasa válida', 'error');
+                                        }
+                                        try {
+                                            const today = new Date();
+                                            const fecha = today.toISOString().slice(0, 19).replace('T', ' ');
+                                            const res = await fetch('http://localhost:5000/api/tasas', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    moneda_origen: tasaForm.moneda_origen,
+                                                    moneda_destino: tasaForm.moneda_destino,
+                                                    tasa_cambio: Number(tasaForm.tasa_cambio),
+                                                    fecha_registro: fecha
+                                                })
+                                            });
+                                            if (res.ok) {
+                                                showNotification('Tasa registrada correctamente', 'success');
+                                                setIsTasaModalOpen(false);
+                                                await fetchTasas();
+                                            } else {
+                                                const err = await res.json().catch(() => ({ message: 'Error al guardar' }));
+                                                throw new Error(err.message);
+                                            }
+                                        } catch (err) {
+                                            showNotification('Error: ' + (err.message || ''), 'error');
+                                        }
+                                    }}
+                                    className="w-full bg-blue-600 text-white font-black py-2 rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Modal de Confirmación para convertir Orden a Factura */}
             {confirmModalOpen && orderToConfirm && (
                 <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
 import axios from 'axios';
+import useTasaCambio from '../../hooks/useTasaCambio.js';
 
 const InventarioView = () => {
+    const tasa = useTasaCambio();
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -227,7 +229,10 @@ const InventarioView = () => {
                                                 <td className="px-6 py-4 whitespace-normal text-sm text-slate-900">{p.nombre}</td>
                                                 <td className="px-6 py-4 whitespace-normal text-sm text-slate-700 bg-slate-200">{p.SKU || p.sku || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-normal text-sm text-slate-700">{p.costo != null ? p.costo : '-'}</td>
-                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-700 bg-green-100">{p.precio_venta != null ? p.precio_venta : '-'}</td>
+                                                <td className="px-6 py-4 whitespace-normal text-sm text-slate-700 bg-green-100">
+                                                    <div>{p.precio_venta != null ? p.precio_venta : '-'}</div>
+                                                    {tasa && p.precio_venta != null && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(p.precio_venta) * tasa).toFixed(2)}</div>}
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-normal text-sm text-slate-700">{p.stock_actual != null ? p.stock_actual : '-'}</td>
                                                 <td className="px-6 py-4 whitespace-normal text-sm bg-blue-50">
                                                     {p.status == 1 || p.status === '1' ? (
