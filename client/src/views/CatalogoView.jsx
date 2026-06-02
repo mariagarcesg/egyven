@@ -27,7 +27,13 @@ const CatalogoView = () => {
         const dataCat = await resCat.json();
 
         setProductos(dataProd);
-        const nombresCat = dataCat.map(c => c.nombre);
+        
+        let catsAFiltrar = dataCat;
+        const currentUser = storedUser ? JSON.parse(storedUser) : null;
+        if (currentUser?.rol_id === 5) {
+          catsAFiltrar = catsAFiltrar.filter(c => c.id !== 4);
+        }
+        const nombresCat = catsAFiltrar.map(c => c.nombre);
         setCategorias(['Todos', ...nombresCat]);
       } catch (error) {
         console.error("Error cargando catálogo:", error);
@@ -44,9 +50,13 @@ const CatalogoView = () => {
   const isCliente = user?.rol_id === 5;
   const isLogged = !!user; // Verifica si hay cualquier usuario logueado
 
+  const productosPermitidos = isCliente
+    ? productos.filter(p => p.categoria_id !== 4) // Ocultar repuestos (categoria_id=4)
+    : productos;
+
   const productosFiltrados = activeCategory === 'Todos'
-    ? productos
-    : productos.filter(p => p.categoria_nombre === activeCategory);
+    ? productosPermitidos
+    : productosPermitidos.filter(p => p.categoria_nombre === activeCategory);
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${isAdmin ? 'bg-white text-slate-900' : 'bg-[#05070a] text-slate-200'} font-sans`}>

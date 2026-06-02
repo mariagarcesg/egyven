@@ -305,7 +305,7 @@ const ComparadorView = () => {
                       <tr key={p.id} className="border-b border-slate-800/40 hover:bg-slate-900/60 transition-colors text-slate-300">
                         <td className="px-4 py-3 font-medium text-slate-900 bg-blue-100">{producto.nombre || p.producto_id}</td>
                         <td className="px-4 py-3 font-semibold text-slate-900 bg-blue-100">${producto.precio_venta ?? '-'}</td>
-                        <td className="px-4 py-3 text-blue-800 font-medium">{p.plataforma}</td>
+                        <td className="px-4 py-3 text-blue-800 font-medium bg-gray-100">{p.plataforma}</td>
                         <td className="px-4 py-3 text-slate-800 max-w-xs truncate font-medium" title={p.nombre_competidor}>
                           {p.nombre_competidor || 'Cargando nombre del catálogo...'}
                         </td>
