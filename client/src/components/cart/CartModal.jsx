@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext.jsx';
 import Notification from '../ui/Notification.jsx';
+import useTasaCambio from '../../hooks/useTasaCambio.js';
 
 const CartModal = () => {
   const { cartItems, isCartOpen, toggleCart, removeFromCart, updateQuantity, checkoutOrder } = useCart();
+  const tasa = useTasaCambio();
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [notification, setNotification] = useState({ message: '', type: 'success' });
@@ -103,7 +105,10 @@ const CartModal = () => {
                         +
                       </button>
                     </div>
-                    <span className="text-blue-600 font-bold">${Number(item.precio_unitario || item.precio_venta).toFixed(2)}</span>
+                    <div>
+                      <span className="text-blue-600 font-bold">${Number(item.precio_unitario || item.precio_venta).toFixed(2)}</span>
+                      {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(item.precio_unitario || item.precio_venta) * tasa).toFixed(2)}</div>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -128,7 +133,10 @@ const CartModal = () => {
             )}
             <div className="flex justify-between items-center mb-6">
               <span className="text-slate-500 uppercase font-black tracking-widest text-xs">Total Estimado</span>
-              <span className="text-3xl font-black italic text-slate-900">${total.toFixed(2)}</span>
+              <div className="text-right">
+                <div className="text-3xl font-black italic text-slate-900">${total.toFixed(2)}</div>
+                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(total * tasa).toFixed(2)}</div>}
+              </div>
             </div>
             <button 
               onClick={handleCheckout}

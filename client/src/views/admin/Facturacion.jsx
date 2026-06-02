@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { useCart } from '../../context/CartContext.jsx';
+import useTasaCambio from '../../hooks/useTasaCambio.js';
 
 const FacturacionView = () => {
     const getInitialTab = () => {
@@ -33,6 +34,7 @@ const FacturacionView = () => {
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState(null);
     const { showNotification } = useCart();
+    const tasa = useTasaCambio();
     // Pago modal state
     const [isPagoModalOpen, setIsPagoModalOpen] = useState(false);
     const [metodos, setMetodos] = useState([]);
@@ -319,7 +321,10 @@ const FacturacionView = () => {
                 <td className="px-6 py-4 text-sm font-bold text-slate-700">#{orden.id}</td>
                 <td className="px-6 py-4 text-sm font-bold text-slate-900 bg-blue-200">{orden.nombre} {orden.apellido}</td>
                 <td className="px-6 py-4 text-sm text-slate-500">{new Date(orden.fecha_orden).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-blue-600 bg-green-100">${Number(orden.total).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-blue-600 bg-green-100">
+                        <div>${Number(orden.total).toFixed(2)}</div>
+                        {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(orden.total) * tasa).toFixed(2)}</div>}
+                    </td>
                 <td className="px-6 py-4">{getStatusBadge(orden.estatus_id)}</td>
                 
                 {/* CELDA DE ACCIONES CORREGIDA */}
@@ -413,11 +418,13 @@ const FacturacionView = () => {
                 </td>
 
                 <td className="px-6 py-4 text-sm font-bold text-blue-600">
-                    ${Number(factura.total).toFixed(2)}
+                    <div>${Number(factura.total).toFixed(2)}</div>
+                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(factura.total) * tasa).toFixed(2)}</div>}
                 </td>
 
                 <td className="px-6 py-4 text-sm font-bold text-green-600 bg-green-100">
-                    ${Number(factura.total_pagado).toFixed(2)}
+                    <div>${Number(factura.total_pagado).toFixed(2)}</div>
+                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(factura.total_pagado) * tasa).toFixed(2)}</div>}
                 </td>
                 <td className="px-6 py-4">{getStatusBadge(factura.estatus_id)}</td>
                 <td className="px-6 py-4 text-right">
@@ -592,9 +599,9 @@ const FacturacionView = () => {
                                 </div>
                             </div>
                             <div className="p-4 border-t bg-slate-50 text-right">
-                                <div className="text-sm text-slate-600">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span></div>
-                                <div className="text-sm text-slate-600">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span></div>
-                                <div className="text-sm">Pendiente: <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span></div>
+                                <div className="text-sm text-slate-600">Total factura: <span className="font-black text-slate-800">${Number(pagoFactura.total).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total) * tasa).toFixed(2)}</span>}</div>
+                                <div className="text-sm text-slate-600">Pagado: <span className="font-black text-green-600">${Number(pagoFactura.total_pagado).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total_pagado) * tasa).toFixed(2)}</span>}</div>
+                                <div className="text-sm">Pendiente: <span className="font-black text-blue-600">${Number(pagoFactura.total - pagoFactura.total_pagado).toFixed(2)}</span>{tasa && <span className="text-xs text-slate-400 ml-1">/ Bs. {(Number(pagoFactura.total - pagoFactura.total_pagado) * tasa).toFixed(2)}</span>}</div>
                             </div>
                         </div>
                     </div>
@@ -689,6 +696,7 @@ const FacturacionView = () => {
                                                 <div className="text-right">
                                                     <div className="text-slate-500 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
                                                     <div className="text-blue-600 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
+                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(item.subtotal || (item.cantidad * item.precio_unitario)) * tasa).toFixed(2)}</div>}
                                                 </div>
                                             </div>
                                         </div>
@@ -698,7 +706,10 @@ const FacturacionView = () => {
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Orden</span>
-                            <span className="text-2xl font-black italic text-slate-900">${Number(selectedOrden.total).toFixed(2)}</span>
+                            <div className="text-right">
+                                <div className="text-2xl font-black italic text-slate-900">${Number(selectedOrden.total).toFixed(2)}</div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedOrden.total) * tasa).toFixed(2)}</div>}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -748,6 +759,7 @@ const FacturacionView = () => {
                                                 <div className="text-right">
                                                     <div className="text-slate-500 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
                                                     <div className="text-blue-600 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
+                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(item.subtotal || (item.cantidad * item.precio_unitario)) * tasa).toFixed(2)}</div>}
                                                 </div>
                                             </div>
                                         </div>
@@ -757,7 +769,10 @@ const FacturacionView = () => {
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Factura</span>
-                            <span className="text-2xl font-black italic text-slate-900">${Number(selectedFactura.total).toFixed(2)}</span>
+                            <div className="text-right">
+                                <div className="text-2xl font-black italic text-slate-900">${Number(selectedFactura.total).toFixed(2)}</div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedFactura.total) * tasa).toFixed(2)}</div>}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 
+router.get('/activa', async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT tasa_cambio
+            FROM tasas_cambio
+            WHERE activo = 1 AND moneda_origen = 'USD' AND moneda_destino = 'VES'
+            ORDER BY fecha_registro DESC
+            LIMIT 1
+        `);
+        res.json({ tasa: rows.length > 0 ? rows[0].tasa_cambio : null });
+    } catch (error) {
+        console.error('ERROR GET TASA ACTIVA:', error);
+        res.status(500).json({ message: 'Error al obtener tasa activa' });
+    }
+});
+
 router.get('/', async (req, res) => {
     try {
         const [rows] = await db.query(`

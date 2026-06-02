@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/layout/Navbar.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import useTasaCambio from '../hooks/useTasaCambio.js';
 
 const CatalogoView = () => {
+  const tasa = useTasaCambio();
   const { addToCart } = useCart();
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [user, setUser] = useState(null);
@@ -152,9 +154,12 @@ const CatalogoView = () => {
                         <p className="text-[9px] text-slate-500 font-mono uppercase tracking-tighter">SKU: {prod.sku}</p>
                       )}
                     </div>
-                    <span className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${isAdmin ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-slate-900 text-slate-400 border-white/5'}`}>
-                      ${prod.precio_venta}
-                    </span>
+                    <div className="text-right">
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${isAdmin ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-slate-900 text-slate-400 border-white/5'}`}>
+                        ${prod.precio_venta}
+                      </span>
+                      {tasa && prod.precio_venta != null && <div className="text-xs text-slate-400 mt-1">Bs. {(Number(prod.precio_venta) * tasa).toFixed(2)}</div>}
+                    </div>
                   </div>
 
                   <p className="text-slate-500 text-sm leading-relaxed mb-8">
@@ -209,7 +214,10 @@ const CatalogoView = () => {
                     <div className={`space-y-4 text-sm border-t pt-6 ${isAdmin ? 'text-slate-600 border-slate-100' : 'text-slate-400 border-white/5'}`}>
                       <div className={`flex justify-between border-b pb-2 ${isAdmin ? 'border-slate-100' : 'border-white/5'}`}>
                         <span className="font-bold text-slate-500 uppercase text-[10px]">Precio Venta</span>
-                        <span className="font-mono text-xs text-blue-500 font-bold">${prod.precio_venta}</span>
+                        <div className="text-right">
+                          <span className="font-mono text-xs text-blue-500 font-bold">${prod.precio_venta}</span>
+                          {tasa && prod.precio_venta != null && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(prod.precio_venta) * tasa).toFixed(2)}</div>}
+                        </div>
                       </div>
                       <div className={`flex justify-between border-b pb-2 ${isAdmin ? 'border-slate-100' : 'border-white/5'}`}>
                         <span className="font-bold text-slate-500 uppercase text-[10px]">Categoría</span>
