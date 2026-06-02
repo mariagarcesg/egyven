@@ -14,7 +14,10 @@ const FacturacionView = () => {
     const [activeTab, setActiveTab] = useState(getInitialTab);
     const [ordenes, setOrdenes] = useState([]);
     const [facturas, setFacturas] = useState([]);
+    const [tasas, setTasas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isTasaModalOpen, setIsTasaModalOpen] = useState(false);
+    const [tasaForm, setTasaForm] = useState({ moneda_origen: 'USD', moneda_destino: 'VES', tasa_cambio: '' });
 
     // Estado para modal de detalles de factura
     const [isFacturaModalOpen, setIsFacturaModalOpen] = useState(false);
@@ -45,7 +48,9 @@ const FacturacionView = () => {
         if (activeTab === 'ordenes') {
             fetchOrdenes();
         } else if (activeTab === 'facturas') {
-            fetchFacturas(); // <--- LLAMADA: Cargar facturas al cambiar de pestaña
+            fetchFacturas();
+        } else if (activeTab === 'tasas') {
+            fetchTasas();
         }
     }, [activeTab]);
 
@@ -95,6 +100,19 @@ const FacturacionView = () => {
             setFacturas(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error al obtener facturas:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchTasas = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('http://localhost:5000/api/tasas');
+            const data = await res.json();
+            setTasas(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error al obtener tasas de cambio:', error);
         } finally {
             setLoading(false);
         }
@@ -263,6 +281,12 @@ const FacturacionView = () => {
                         className={`text-sm font-black uppercase tracking-widest transition-colors pb-4 -mb-4 border-b-2 ${activeTab === 'facturas' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                     >
                         Facturas
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('tasas')}
+                        className={`text-sm font-black uppercase tracking-widest transition-colors pb-4 -mb-4 border-b-2 ${activeTab === 'tasas' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                    >
+                        Tasas
                     </button>
                 </div>
 
@@ -433,6 +457,56 @@ const FacturacionView = () => {
     )}
 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'tasas' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={() => {
+                                    setTasaForm({ moneda_origen: 'USD', moneda_destino: 'VES', tasa_cambio: '' });
+                                    setIsTasaModalOpen(true);
+                                }}
+                                className="text-sm font-black uppercase tracking-widest bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                            >
+                                Actualizar
+                            </button>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Moneda Origen</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Moneda Destino</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tasa</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic">Cargando tasas...</td>
+                                            </tr>
+                                        ) : tasas.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic">No hay tasas de cambio registradas.</td>
+                                            </tr>
+                                        ) : (
+                                            tasas.map((tasa, index) => (
+                                                <tr key={index} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{tasa.moneda_origen}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{tasa.moneda_destino}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">{Number(tasa.tasa_cambio).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">{new Date(tasa.fecha_registro).toLocaleString()}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -688,6 +762,99 @@ const FacturacionView = () => {
                     </div>
                 </div>
             )}
+            {/* Modal Nueva Tasa de Cambio */}
+            {isTasaModalOpen && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsTasaModalOpen(false)}></div>
+                    <div className="bg-white rounded-[1rem] shadow-2xl w-full max-w-md z-10 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="text-lg font-black">Nueva Tasa de Cambio</h3>
+                            <button onClick={() => setIsTasaModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center">✕</button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Moneda Origen</label>
+                                <select
+                                    value={tasaForm.moneda_origen}
+                                    onChange={e => setTasaForm(f => ({ ...f, moneda_origen: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                >
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Moneda Destino</label>
+                                <select
+                                    value={tasaForm.moneda_destino}
+                                    onChange={e => setTasaForm(f => ({ ...f, moneda_destino: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                >
+                                    <option value="VES">VES</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Tasa</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={tasaForm.tasa_cambio}
+                                    onChange={e => setTasaForm(f => ({ ...f, tasa_cambio: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Fecha</label>
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={new Date().toLocaleString()}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm bg-slate-50 text-slate-400 cursor-not-allowed"
+                                />
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    onClick={async () => {
+                                        if (!tasaForm.tasa_cambio || Number(tasaForm.tasa_cambio) <= 0) {
+                                            return showNotification('Ingrese una tasa válida', 'error');
+                                        }
+                                        try {
+                                            const today = new Date();
+                                            const fecha = today.toISOString().slice(0, 19).replace('T', ' ');
+                                            const res = await fetch('http://localhost:5000/api/tasas', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    moneda_origen: tasaForm.moneda_origen,
+                                                    moneda_destino: tasaForm.moneda_destino,
+                                                    tasa_cambio: Number(tasaForm.tasa_cambio),
+                                                    fecha_registro: fecha
+                                                })
+                                            });
+                                            if (res.ok) {
+                                                showNotification('Tasa registrada correctamente', 'success');
+                                                setIsTasaModalOpen(false);
+                                                await fetchTasas();
+                                            } else {
+                                                const err = await res.json().catch(() => ({ message: 'Error al guardar' }));
+                                                throw new Error(err.message);
+                                            }
+                                        } catch (err) {
+                                            showNotification('Error: ' + (err.message || ''), 'error');
+                                        }
+                                    }}
+                                    className="w-full bg-blue-600 text-white font-black py-2 rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Modal de Confirmación para convertir Orden a Factura */}
             {confirmModalOpen && orderToConfirm && (
                 <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
