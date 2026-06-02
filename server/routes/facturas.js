@@ -248,11 +248,16 @@ router.post('/pagos', async (req, res) => {
         await db.query('UPDATE factura SET total_pagado = COALESCE(total_pagado,0) + ? WHERE id = ?', [monto, factura_id]);
 
         // Verificar si ya está totalmente pagada
-        const [rows] = await db.query('SELECT total, total_pagado FROM factura WHERE id = ?', [factura_id]);
+        const [rows] = await db.query('SELECT total, total_pagado, estatus_id FROM factura WHERE id = ?', [factura_id]);
         if (rows && rows.length) {
             const f = rows[0];
-            if (Number(f.total_pagado) >= Number(f.total)) {
+            if (Number(f.total_pagado) >= Number(f.total) && Number(f.estatus_id) !== 3) {
                 await db.query('UPDATE factura SET estatus_id = 3 WHERE id = ?', [factura_id]);
+                // Descontar stock de los productos asociados a la factura
+                const [detalles] = await db.query('SELECT producto_id, cantidad FROM detalle_factura WHERE factura_id = ?', [factura_id]);
+                for (const item of detalles) {
+                    await db.query('UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?', [item.cantidad, item.producto_id]);
+                }
             }
         }
 
@@ -275,10 +280,24 @@ router.put('/:id', async (req, res) => {
     }
 
     try {
+        const [current] = await db.query('SELECT estatus_id FROM factura WHERE id = ?', [id]);
+        if (!current || !current.length) {
+            return res.status(404).json({ message: 'Factura no encontrada.' });
+        }
+        const previousStatus = Number(current[0].estatus_id);
+
         const [result] = await db.query('UPDATE factura SET estatus_id = ? WHERE id = ?', [estatus_id, id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Factura no encontrada.' });
         }
+
+        if (Number(estatus_id) === 3 && previousStatus !== 3) {
+            const [detalles] = await db.query('SELECT producto_id, cantidad FROM detalle_factura WHERE factura_id = ?', [id]);
+            for (const item of detalles) {
+                await db.query('UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?', [item.cantidad, item.producto_id]);
+            }
+        }
+
         res.json({ message: 'Estatus de factura actualizado.' });
     } catch (error) {
         console.error('ERROR actualizando estatus factura:', error);
