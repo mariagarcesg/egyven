@@ -103,27 +103,27 @@ exports.obtenerUsuarioPorId = async (req, res) => {
 // Función para actualizar el perfil de un usuario
 exports.actualizarUsuario = async (req, res) => {
     const { id } = req.params;
-    const { username, password, cedula_rif, nombre, apellido, telefono, email, direccion, status } = req.body;
-    
+    const { username, password, rol_id, cedula_rif, nombre, apellido, telefono, email, direccion, status } = req.body;
+
     try {
         let query;
         let params;
-        
+
         // Si el password viene vacío, no lo actualizamos para mantener el anterior
         if (password && password.trim() !== '') {
             query = `
-                UPDATE usuarios 
-                SET username = ?, password = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?, status = ?
+                UPDATE usuarios
+                SET username = ?, password = ?, rol_id = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?, status = ?
                 WHERE id = ?
             `;
-            params = [username, password, cedula_rif, nombre, apellido, telefono, email, direccion, status, id];
+            params = [username, password, rol_id, cedula_rif, nombre, apellido, telefono, email, direccion, status, id];
         } else {
             query = `
-                UPDATE usuarios 
-                SET username = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?, status = ?
+                UPDATE usuarios
+                SET username = ?, rol_id = ?, cedula_rif = ?, nombre = ?, apellido = ?, telefono = ?, email = ?, direccion = ?, status = ?
                 WHERE id = ?
             `;
-            params = [username, cedula_rif, nombre, apellido, telefono, email, direccion, status, id];
+            params = [username, rol_id, cedula_rif, nombre, apellido, telefono, email, direccion, status, id];
         }
         
         console.log('Actualizar usuario payload:', params);

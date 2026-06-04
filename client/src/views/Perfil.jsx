@@ -7,6 +7,7 @@ const Perfil = ({ userId = null, embedded = false, onClose = null, onSuccess = n
   const [formData, setFormData] = useState({
     username: '',
     password: '',
+    rol_id: '',
     cedula_rif: '',
     nombre: '',
     apellido: '',
@@ -15,7 +16,11 @@ const Perfil = ({ userId = null, embedded = false, onClose = null, onSuccess = n
     direccion: '',
     status: 1
   });
+  const [roles, setRoles] = useState([]);
   const [isEditing, setIsEditing] = useState(embedded ? true : false);
+
+  const loggedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isSuperusuario = loggedUser?.rol_id === 1;
   const [notification, setNotification] = useState({ message: '', type: 'success' });
   const [loading, setLoading] = useState(true);
 
@@ -37,12 +42,17 @@ const Perfil = ({ userId = null, embedded = false, onClose = null, onSuccess = n
           return;
         }
 
-        const response = await fetch(`http://localhost:5000/api/usuarios/${targetId}`);
-        const data = await response.json();
-        if (response.ok) {
+        const [userResponse, rolesResponse] = await Promise.all([
+          fetch(`http://localhost:5000/api/usuarios/${targetId}`),
+          embedded ? fetch('http://localhost:5000/api/roles') : Promise.resolve(null)
+        ]);
+
+        const data = await userResponse.json();
+        if (userResponse.ok) {
           setFormData({
             username: data.username || '',
-            password: '', // Por seguridad no mostramos el hash, si lo cambia se actualiza
+            password: '',
+            rol_id: data.rol_id || '',
             cedula_rif: data.cedula_rif || '',
             nombre: data.nombre || '',
             apellido: data.apellido || '',
@@ -53,15 +63,20 @@ const Perfil = ({ userId = null, embedded = false, onClose = null, onSuccess = n
           });
           setUser(data);
         }
+
+        if (rolesResponse && rolesResponse.ok) {
+          const rolesData = await rolesResponse.json();
+          setRoles(rolesData);
+        }
       } catch (error) {
         console.error('Error fetching user details:', error);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchUserData();
-  }, [userId]);
+  }, [userId, embedded]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -214,8 +229,26 @@ const Perfil = ({ userId = null, embedded = false, onClose = null, onSuccess = n
                 />
               </div>
 
+              {embedded && isSuperusuario && (
+                <div>
+                  <label className="block text-xs font-bold mb-1">Rol</label>
+                  <select
+                    name="rol_id"
+                    value={formData.rol_id}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    className={`w-full rounded-md px-2 py-1.5 text-sm border ${isAdmin ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#0b1116] border-white/5 text-white'}`}
+                  >
+                    <option value="">-- Seleccionar rol --</option>
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>{r.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {embedded && (
-                <div className="md:col-span-2 flex items-center gap-3">
+                <div className="flex items-center gap-3 mt-1">
                   <input
                     id="status"
                     name="status"
