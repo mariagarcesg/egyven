@@ -617,8 +617,7 @@ const ServicioTecnico = () => {
                             <td className="px-8 py-4 text-slate-600">{c.telefono || '-'}</td>
                             <td className="px-8 py-4 text-slate-600">{c.correo || '-'}</td>
                             <td className="px-8 py-4 text-center">
-                              <button onClick={() => openEditModal(c)} className="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition-colors mr-2">Editar</button>
-                              <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 font-bold text-[10px] uppercase tracking-widest bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors">Eliminar</button>
+                              <button onClick={() => openEditModal(c)} className="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition-colors">Editar</button>
                             </td>
                           </tr>
                         ))}

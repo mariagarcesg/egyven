@@ -124,6 +124,22 @@ const InventarioView = () => {
         }
     };
 
+    const handleToggleStatus = async (producto) => {
+        const nuevoStatus = producto.status == 1 ? 0 : 1;
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const fd = new FormData();
+            fd.append('status', nuevoStatus);
+            await axios.put(`${API_URL}/api/productos/${producto.id}`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setProductos(prev => prev.map(p => p.id === producto.id ? { ...p, status: nuevoStatus } : p));
+        } catch (err) {
+            console.error('Error al cambiar status', err);
+            alert('Error al cambiar el status del producto');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-white text-slate-900 font-sans">
             <Navbar />
@@ -235,11 +251,12 @@ const InventarioView = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-normal text-sm text-slate-700">{p.stock_actual != null ? p.stock_actual : '-'}</td>
                                                 <td className="px-6 py-4 whitespace-normal text-sm bg-blue-50">
-                                                    {p.status == 1 || p.status === '1' ? (
-                                                        <span className="text-green-600 font-medium">Disponible</span>
-                                                    ) : (
-                                                        <span className="text-red-600 font-medium">No disponible</span>
-                                                    )}
+                                                    <button
+                                                        onClick={() => handleToggleStatus(p)}
+                                                        className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${p.status == 1 ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                                                    >
+                                                        {p.status == 1 ? 'Disponible' : 'No disponible'}
+                                                    </button>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{p.categoria_nombre || (p.categoria_id && p.categoria_id.nombre) || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">

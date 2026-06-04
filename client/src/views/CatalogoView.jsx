@@ -32,7 +32,7 @@ const CatalogoView = () => {
         
         let catsAFiltrar = dataCat;
         const currentUser = storedUser ? JSON.parse(storedUser) : null;
-        if (currentUser?.rol_id === 5) {
+        if (!currentUser || currentUser?.rol_id === 5) {
           catsAFiltrar = catsAFiltrar.filter(c => c.id !== 4);
         }
         const nombresCat = catsAFiltrar.map(c => c.nombre);
@@ -52,9 +52,9 @@ const CatalogoView = () => {
   const isCliente = user?.rol_id === 5;
   const isLogged = !!user; // Verifica si hay cualquier usuario logueado
 
-  const productosPermitidos = isCliente
-    ? productos.filter(p => p.categoria_id !== 4) // Ocultar repuestos (categoria_id=4)
-    : productos;
+  const productosPermitidos = (isCliente || !isLogged)
+    ? productos.filter(p => p.categoria_id !== 4 && p.status !== 0)
+    : productos.filter(p => p.status !== 0);
 
   const productosFiltrados = activeCategory === 'Todos'
     ? productosPermitidos

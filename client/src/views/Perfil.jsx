@@ -201,6 +201,13 @@ const Perfil = ({ userId = null, embedded = false, onClose = null, onSuccess = n
               </div>
 
               <div className="md:col-span-2">
+                <label className="block text-xs font-bold mb-1">Dirección</label>
+                <input name="direccion" value={formData.direccion} onChange={handleChange} disabled={!isEditing}
+                  className={`w-full rounded-md px-2 py-1.5 text-sm ${isAdmin ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#0b1116] border-white/5 text-white'}`}
+                />
+              </div>
+
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold mb-1">Nueva Contraseña (dejar en blanco para mantener)</label>
                 <input type="password" name="password" value={formData.password} onChange={handleChange} disabled={!isEditing}
                   className="w-full rounded-md px-2 py-1.5 text-sm bg-slate-50 border border-slate-200"

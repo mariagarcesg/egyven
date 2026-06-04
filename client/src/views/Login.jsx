@@ -72,7 +72,7 @@ const Login = () => {
 
           <div className="text-left">
             <h1 className="text-4xl font-black tracking-tighter text-white leading-none">
-              EGY<span className="text-blue-500">VEN</span>
+              TEC<span className="text-blue-500">NOVA</span>
             </h1>
             <p className="text-slate-500 text-[9px] mt-1 uppercase tracking-[0.3em] font-bold">
               Sistemas de Control
@@ -82,9 +82,9 @@ const Login = () => {
 
         {/* Tarjeta de Login */}
         <div className="bg-[#0d1117]/80 backdrop-blur-2xl border border-white/5 p-10 rounded-[2.5rem] shadow-2xl">
-          <h2 className="text-2xl font-bold text-white mb-2">Acceso de Personal</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Acceso de Usuario</h2>
           <p className="text-slate-400 text-sm mb-8">
-            Ingresa tus credenciales para gestionar el inventario.
+            Ingresa tus credenciales
           </p>
 
           {error && (
