@@ -217,6 +217,20 @@ exports.obtenerTecnicos = async (req, res) => {
   }
 };
 
+// Verifica si todas las órdenes de un equipo están Entregadas y lo marca Inactivo
+const checkAndUpdateEquipoStatus = async (equipo_id) => {
+  if (!equipo_id) return;
+  const [ordenes] = await db.query(
+    'SELECT estado FROM ordenes_servicio WHERE equipo_id = ?',
+    [equipo_id]
+  );
+  if (ordenes.length === 0) return;
+  const todasEntregadas = ordenes.every(o => (o.estado || '').trim() === 'Entregado');
+  if (todasEntregadas) {
+    await db.query('UPDATE equipos_reparacion SET estado = 0 WHERE id = ?', [equipo_id]);
+  }
+};
+
 // Crear nueva orden de servicio
 exports.crearOrden = async (req, res) => {
   const { equipo_id, tecnico_id, fecha_ingreso, diagnostico_interno, estado, mano_obra, costo_repuestos, total } = req.body;
@@ -240,6 +254,7 @@ exports.crearOrden = async (req, res) => {
     const query = `INSERT INTO ordenes_servicio (equipo_id, tecnico_id, fecha_ingreso, diagnostico_interno, estado, mano_obra, costo_repuestos, total_pagar, fecha_entrega) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const [result] = await db.query(query, [equipo_id, tecnico_id, fecha_ingreso, diagnostico_interno || null, dbEstado, mano_obra || 0, costo_repuestos || 0, total || 0, fechaEntrega]);
     const [rows] = await db.query(`SELECT o.id, o.equipo_id, CONCAT(e.marca, ' ', e.modelo) AS equipo_nombre, o.tecnico_id, CONCAT(t.nombre, ' ', t.apellido) AS tecnico_nombre, o.fecha_ingreso, o.fecha_entrega, o.estado, o.mano_obra, o.costo_repuestos, o.total_pagar AS total FROM ordenes_servicio o LEFT JOIN equipos_reparacion e ON o.equipo_id = e.id LEFT JOIN usuarios t ON o.tecnico_id = t.id WHERE o.id = ?`, [result.insertId]);
+    await checkAndUpdateEquipoStatus(equipo_id);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error crearOrden:', error);
@@ -291,6 +306,7 @@ exports.actualizarOrden = async (req, res) => {
     }
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Orden no encontrada' });
     const [rows] = await db.query(`SELECT o.id, o.equipo_id, CONCAT(e.marca, ' ', e.modelo) AS equipo_nombre, o.tecnico_id, CONCAT(t.nombre, ' ', t.apellido) AS tecnico_nombre, o.fecha_ingreso, o.fecha_entrega, o.estado, o.mano_obra, o.costo_repuestos, o.total_pagar AS total FROM ordenes_servicio o LEFT JOIN equipos_reparacion e ON o.equipo_id = e.id LEFT JOIN usuarios t ON o.tecnico_id = t.id WHERE o.id = ?`, [id]);
+    await checkAndUpdateEquipoStatus(eqId);
     res.status(200).json(rows[0]);
   } catch (error) {
     console.error('Error actualizarOrden:', error);
