@@ -28,6 +28,8 @@ const servicioTecnicoRoutes = require('./routes/servicioTecnico');
 const comparadorRoutes = require('./routes/comparador');
 const tasasRoutes = require('./routes/tasas');
 const rolesRoutes = require('./routes/roles');
+const clientesRoutes = require('./routes/clientes');
+const ordenClienteRoutes = require('./routes/ordenCliente');
 
 // Uso de Rutas
 app.use('/api/usuarios', usuariosRoutes);
@@ -39,6 +41,8 @@ app.use('/api/servicio-tecnico', servicioTecnicoRoutes);
 app.use('/api/comparador', comparadorRoutes);
 app.use('/api/tasas', tasasRoutes);
 app.use('/api/roles', rolesRoutes);
+app.use('/api/clientes', clientesRoutes);
+app.use('/api/orden-cliente', ordenClienteRoutes);
 
 // DEBUG: listar rutas registradas (solo en entorno de desarrollo)
 if (process.env.NODE_ENV !== 'production') {

@@ -50,6 +50,31 @@ const FacturacionView = () => {
     const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
     const [facturaToFinalize, setFacturaToFinalize] = useState(null);
 
+    // Facturas sub-tab state
+    const [facturaSubTab, setFacturaSubTab] = useState(() => {
+        try { return localStorage.getItem('facturacion.facturaSubTab') || 'online'; } catch (e) { return 'online'; }
+    });
+    const [facturasCliente, setFacturasCliente] = useState([]);
+    const [isDetalleFacturaClienteOpen, setIsDetalleFacturaClienteOpen] = useState(false);
+    const [selectedFacturaCliente, setSelectedFacturaCliente] = useState(null);
+    const [detallesFacturaCliente, setDetallesFacturaCliente] = useState([]);
+    const [loadingDetallesFactura, setLoadingDetallesFactura] = useState(false);
+
+    // Clientes tab state
+    const [clientes, setClientes] = useState([]);
+    const [isClienteModalOpen, setIsClienteModalOpen] = useState(false);
+    const [selectedCliente, setSelectedCliente] = useState(null);
+    const [clienteForm, setClienteForm] = useState({ nombre: '', documento_identidad: '', telefono: '', direccion: '' });
+
+    // Orden Tienda state
+    const [isOrdenTiendaModalOpen, setIsOrdenTiendaModalOpen] = useState(false);
+    const [productosLista, setProductosLista] = useState([]);
+    const [ordenItems, setOrdenItems] = useState([{ producto_id: '', precio: 0, cantidad: 1 }]);
+    const [ordenClienteId, setOrdenClienteId] = useState('');
+    const [clienteModalContext, setClienteModalContext] = useState('clientes');
+    const [ordenesCliente, setOrdenesCliente] = useState([]);
+    const [editOrdenId, setEditOrdenId] = useState(null);
+
     useEffect(() => {
         if (activeTab === 'ordenes') {
             fetchOrdenes();
@@ -57,17 +82,21 @@ const FacturacionView = () => {
             fetchFacturas();
         } else if (activeTab === 'tasas') {
             fetchTasas();
+        } else if (activeTab === 'clientes') {
+            fetchClientes();
+        } else if (activeTab === 'ordenTienda') {
+            fetchOrdenesCliente();
         }
     }, [activeTab]);
 
     // persist active tab so it survives page refresh
     useEffect(() => {
-        try {
-            localStorage.setItem('facturacion.activeTab', activeTab);
-        } catch (e) {
-            // ignore
-        }
+        try { localStorage.setItem('facturacion.activeTab', activeTab); } catch (e) {}
     }, [activeTab]);
+
+    useEffect(() => {
+        try { localStorage.setItem('facturacion.facturaSubTab', facturaSubTab); } catch (e) {}
+    }, [facturaSubTab]);
 
     useEffect(() => {
         // precargar métodos de pago para el modal
@@ -101,9 +130,14 @@ const FacturacionView = () => {
     const fetchFacturas = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:5000/api/facturas');
-            const data = await res.json();
-            setFacturas(Array.isArray(data) ? data : []);
+            const [resOnline, resTienda] = await Promise.all([
+                fetch('http://localhost:5000/api/facturas'),
+                fetch('http://localhost:5000/api/orden-cliente/facturas')
+            ]);
+            const dataOnline = await resOnline.json();
+            const dataTienda = await resTienda.json();
+            setFacturas(Array.isArray(dataOnline) ? dataOnline : []);
+            setFacturasCliente(Array.isArray(dataTienda) ? dataTienda : []);
         } catch (error) {
             console.error('Error al obtener facturas:', error);
         } finally {
@@ -121,6 +155,220 @@ const FacturacionView = () => {
             console.error('Error al obtener tasas de cambio:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchClientes = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('http://localhost:5000/api/clientes');
+            const data = await res.json();
+            setClientes(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error al obtener clientes:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchOrdenesCliente = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('http://localhost:5000/api/orden-cliente');
+            const data = await res.json();
+            setOrdenesCliente(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error al obtener órdenes de tienda:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAbrirOrdenTienda = async () => {
+        try {
+            const fetches = [];
+            if (productosLista.length === 0) fetches.push(fetch('http://localhost:5000/api/productos').then(r => r.json()));
+            else fetches.push(Promise.resolve(null));
+            if (clientes.length === 0) fetches.push(fetch('http://localhost:5000/api/clientes').then(r => r.json()));
+            else fetches.push(Promise.resolve(null));
+            const [prods, clts] = await Promise.all(fetches);
+            if (prods) setProductosLista(Array.isArray(prods) ? prods : []);
+            if (clts) setClientes(Array.isArray(clts) ? clts : []);
+        } catch (err) {
+            console.error('Error al cargar datos:', err);
+        }
+        setEditOrdenId(null);
+        setOrdenClienteId('');
+        setOrdenItems([{ producto_id: '', precio: 0, cantidad: 1 }]);
+        setIsOrdenTiendaModalOpen(true);
+    };
+
+    const handleEditarOrden = async (orden) => {
+        try {
+            const fetches = [];
+            if (productosLista.length === 0) fetches.push(fetch('http://localhost:5000/api/productos').then(r => r.json()));
+            else fetches.push(Promise.resolve(null));
+            if (clientes.length === 0) fetches.push(fetch('http://localhost:5000/api/clientes').then(r => r.json()));
+            else fetches.push(Promise.resolve(null));
+            fetches.push(fetch(`http://localhost:5000/api/orden-cliente/${orden.id}/detalles`).then(r => r.json()));
+            const [prods, clts, detalles] = await Promise.all(fetches);
+            if (prods) setProductosLista(Array.isArray(prods) ? prods : []);
+            if (clts) setClientes(Array.isArray(clts) ? clts : []);
+            const items = (Array.isArray(detalles) ? detalles : []).map(d => ({
+                producto_id: String(d.producto_id),
+                precio: Number(d.precio_unitario),
+                cantidad: d.cantidad
+            }));
+            setEditOrdenId(orden.id);
+            setOrdenClienteId(String(orden.cliente_id));
+            setOrdenItems(items.length > 0 ? items : [{ producto_id: '', precio: 0, cantidad: 1 }]);
+            setIsOrdenTiendaModalOpen(true);
+        } catch (err) {
+            showNotification('Error al cargar la orden: ' + (err.message || ''), 'error');
+        }
+    };
+
+    const handleOrdenProductoChange = (index, productoId) => {
+        const prod = productosLista.find(p => String(p.id) === String(productoId));
+        setOrdenItems(prev => prev.map((item, i) =>
+            i === index
+                ? { ...item, producto_id: productoId, precio: prod ? Number(prod.precio_venta) : 0 }
+                : item
+        ));
+    };
+
+    const handleOrdenCantidadChange = (index, value) => {
+        setOrdenItems(prev => prev.map((item, i) =>
+            i === index ? { ...item, cantidad: Math.max(1, Number(value) || 1) } : item
+        ));
+    };
+
+    const handleAgregarItem = () => {
+        setOrdenItems(prev => [...prev, { producto_id: '', precio: 0, cantidad: 1 }]);
+    };
+
+    const handleEliminarItem = (index) => {
+        setOrdenItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleVerDetallesFacturaCliente = async (factura) => {
+        setSelectedFacturaCliente(factura);
+        setDetallesFacturaCliente([]);
+        setIsDetalleFacturaClienteOpen(true);
+        setLoadingDetallesFactura(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/orden-cliente/facturas/${factura.id}/detalles`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al obtener detalles');
+            setDetallesFacturaCliente(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error al obtener detalles:', err);
+            showNotification('Error al cargar detalles: ' + (err.message || ''), 'error');
+            setDetallesFacturaCliente([]);
+        } finally {
+            setLoadingDetallesFactura(false);
+        }
+    };
+
+    const handleProcesarOrdenCliente = async (orden) => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/orden-cliente/${orden.id}/procesar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (res.ok) {
+                showNotification(`Orden #${orden.id} procesada correctamente`, 'success');
+                await fetchOrdenesCliente();
+            } else {
+                const err = await res.json().catch(() => ({ error: 'Error al procesar' }));
+                throw new Error(err.error || 'Error al procesar');
+            }
+        } catch (err) {
+            showNotification('Error: ' + (err.message || ''), 'error');
+        }
+    };
+
+    const handleGenerarOrden = async () => {
+        if (!ordenClienteId) return showNotification('Seleccione un cliente', 'error');
+        const itemsInvalidos = ordenItems.some(i => !i.producto_id || i.cantidad < 1);
+        if (itemsInvalidos) return showNotification('Complete todos los productos antes de generar', 'error');
+
+        const isEdit = editOrdenId !== null;
+        const payload = {
+            cliente_id: ordenClienteId,
+            items: ordenItems.map(item => ({
+                producto_id: item.producto_id,
+                cantidad: item.cantidad,
+                precio_unitario: item.precio,
+            }))
+        };
+
+        try {
+            const res = await fetch(
+                isEdit ? `http://localhost:5000/api/orden-cliente/${editOrdenId}` : 'http://localhost:5000/api/orden-cliente',
+                {
+                    method: isEdit ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                showNotification(isEdit ? `Orden #${editOrdenId} actualizada` : `Orden #${data.orden_id} generada exitosamente`, 'success');
+                setIsOrdenTiendaModalOpen(false);
+                await fetchOrdenesCliente();
+            } else {
+                const err = await res.json().catch(() => ({ error: 'Error al guardar la orden' }));
+                throw new Error(err.error || 'Error al guardar la orden');
+            }
+        } catch (err) {
+            showNotification('Error: ' + (err.message || ''), 'error');
+        }
+    };
+
+    const handleEditarCliente = (cliente) => {
+        setSelectedCliente(cliente);
+        setClienteForm({
+            nombre: cliente.nombre || '',
+            documento_identidad: cliente.documento_identidad || '',
+            telefono: cliente.telefono || '',
+            direccion: cliente.direccion || ''
+        });
+        setIsClienteModalOpen(true);
+    };
+
+    const handleNuevoCliente = (context = 'clientes') => {
+        setClienteModalContext(context);
+        setSelectedCliente(null);
+        setClienteForm({ nombre: '', documento_identidad: '', telefono: '', direccion: '' });
+        setIsClienteModalOpen(true);
+    };
+
+    const handleGuardarCliente = async () => {
+        try {
+            const isEdit = selectedCliente !== null;
+            const url = isEdit
+                ? `http://localhost:5000/api/clientes/${selectedCliente.id}`
+                : 'http://localhost:5000/api/clientes';
+            const res = await fetch(url, {
+                method: isEdit ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(clienteForm)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showNotification(isEdit ? 'Cliente actualizado correctamente' : 'Cliente creado correctamente', 'success');
+                setIsClienteModalOpen(false);
+                await fetchClientes();
+                if (!isEdit && clienteModalContext === 'ordenTienda' && data.cliente) {
+                    setOrdenClienteId(String(data.cliente.id));
+                }
+            } else {
+                const err = await res.json().catch(() => ({ error: 'Error al guardar' }));
+                throw new Error(err.error || 'Error al guardar');
+            }
+        } catch (err) {
+            showNotification('Error: ' + (err.message || ''), 'error');
         }
     };
 
@@ -383,6 +631,18 @@ const FacturacionView = () => {
                     >
                         Tasas
                     </button>
+                    <button
+                        onClick={() => setActiveTab('clientes')}
+                        className={`text-sm font-black uppercase tracking-widest transition-colors pb-4 -mb-4 border-b-2 ${activeTab === 'clientes' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                    >
+                        Clientes
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('ordenTienda')}
+                        className={`text-sm font-black uppercase tracking-widest transition-colors pb-4 -mb-4 border-b-2 ${activeTab === 'ordenTienda' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                    >
+                        Orden Tienda
+                    </button>
                 </div>
 
                 {activeTab === 'ordenes' && (
@@ -467,6 +727,24 @@ const FacturacionView = () => {
                 )}
 
                 {activeTab === 'facturas' && (
+                    <div>
+                        {/* Sub-tabs */}
+                        <div className="flex gap-2 mb-6">
+                            <button
+                                onClick={() => setFacturaSubTab('online')}
+                                className={`text-xs font-black uppercase tracking-widest px-5 py-2 rounded-xl border-2 transition-colors ${facturaSubTab === 'online' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'}`}
+                            >
+                                Online
+                            </button>
+                            <button
+                                onClick={() => setFacturaSubTab('tienda')}
+                                className={`text-xs font-black uppercase tracking-widest px-5 py-2 rounded-xl border-2 transition-colors ${facturaSubTab === 'tienda' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-400'}`}
+                            >
+                                Tienda
+                            </button>
+                        </div>
+
+                    {facturaSubTab === 'online' && (
                     <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -564,6 +842,84 @@ const FacturacionView = () => {
                             </table>
                         </div>
                     </div>
+                    )}
+
+                    {facturaSubTab === 'tienda' && (
+                        <div>
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch('http://localhost:5000/api/orden-cliente/facturas/reparar', { method: 'POST' });
+                                        const data = await res.json();
+                                        showNotification(data.message, res.ok ? 'success' : 'error');
+                                        if (res.ok && data.reparadas > 0) await fetchFacturas();
+                                    } catch (err) {
+                                        showNotification('Error al reparar: ' + (err.message || ''), 'error');
+                                    }
+                                }}
+                                className="text-xs font-black uppercase tracking-widest text-slate-500 border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-xl transition-colors"
+                            >
+                                Reparar Detalles
+                            </button>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-[2rem] overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-blue-100 border-b border-blue-200">
+                                            <th className="px-6 py-4 text-[10px] font-black text-blue-600 uppercase tracking-widest">Nro Factura</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-blue-600 uppercase tracking-widest">Cliente</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-blue-600 uppercase tracking-widest">Total</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-blue-600 uppercase tracking-widest">Status</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-blue-600 uppercase tracking-widest text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr><td colSpan="5" className="px-6 py-12 text-center text-blue-400 italic">Cargando facturas...</td></tr>
+                                        ) : facturasCliente.length === 0 ? (
+                                            <tr><td colSpan="5" className="px-6 py-12 text-center text-blue-400 italic">No hay facturas de tienda registradas.</td></tr>
+                                        ) : (
+                                            facturasCliente.map(f => (
+                                                <tr key={f.id} className="border-b border-blue-100 hover:bg-blue-100/50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold text-blue-800">#{f.numero_factura}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{f.nombre_cliente}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-blue-700">
+                                                        <div>${Number(f.total).toFixed(2)}</div>
+                                                        {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(f.total) * tasa).toFixed(2)}</div>}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {f.estatus_pago
+                                                            ? <span className="bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{f.estatus_pago}</span>
+                                                            : <span className="bg-yellow-100 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pendiente</span>
+                                                        }
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleVerDetallesFacturaCliente(f)}
+                                                                className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-slate-200"
+                                                            >
+                                                                Detalles
+                                                            </button>
+                                                            <button
+                                                                className="text-[10px] font-black uppercase tracking-widest text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                            >
+                                                                Pago
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        </div>
+                    )}
+                    </div>
                 )}
 
                 {activeTab === 'tasas' && (
@@ -616,6 +972,144 @@ const FacturacionView = () => {
                                                     </span>
                                                 </td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{new Date(tasa.fecha_registro).toLocaleString()}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'clientes' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={handleNuevoCliente}
+                                className="text-sm font-black uppercase tracking-widest bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                            >
+                                Nuevo Cliente
+                            </button>
+                        </div>
+                    <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Nombre</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Documento</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Teléfono</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Dirección</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-12 text-center text-slate-400 italic">Cargando clientes...</td>
+                                        </tr>
+                                    ) : clientes.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-12 text-center text-slate-400 italic">No hay clientes registrados.</td>
+                                        </tr>
+                                    ) : (
+                                        clientes.map(cliente => (
+                                            <tr key={cliente.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{cliente.nombre}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-700">{cliente.documento_identidad || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-700">{cliente.telefono || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-700">{cliente.direccion || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-500">
+                                                    {cliente.fecha_registro ? new Date(cliente.fecha_registro).toLocaleDateString() : '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleEditarCliente(cliente)}
+                                                        className="text-[10px] font-black uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    </div>
+                )}
+
+                {activeTab === 'ordenTienda' && (
+                    <div>
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={handleAbrirOrdenTienda}
+                                className="text-sm font-black uppercase tracking-widest bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                            >
+                                Generar Orden
+                            </button>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">ID</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Cliente</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo Venta</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Total</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estatus</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan="7" className="px-6 py-12 text-center text-slate-400 italic">Cargando órdenes...</td>
+                                            </tr>
+                                        ) : ordenesCliente.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" className="px-6 py-12 text-center text-slate-400 italic">No hay órdenes de tienda registradas.</td>
+                                            </tr>
+                                        ) : (
+                                            ordenesCliente.map(orden => (
+                                                <tr key={orden.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">#{orden.id}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{orden.nombre_cliente}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600">{orden.tipo_venta}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">
+                                                        <div>${Number(orden.total).toFixed(2)}</div>
+                                                        {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(orden.total) * tasa).toFixed(2)}</div>}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="bg-yellow-100 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                                            {orden.estatus}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">
+                                                        {new Date(orden.fecha_creacion).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleEditarOrden(orden)}
+                                                                className="text-[10px] font-black uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                            >
+                                                                Editar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleProcesarOrdenCliente(orden)}
+                                                                disabled={orden.estatus === 'Procesada'}
+                                                                className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-colors ${orden.estatus === 'Procesada' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'text-white bg-slate-700 hover:bg-slate-800'}`}
+                                                            >
+                                                                Procesar
+                                                            </button>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))
                                         )}
@@ -1021,6 +1515,252 @@ const FacturacionView = () => {
                                             showNotification('Error: ' + (err.message || ''), 'error');
                                         }
                                     }}
+                                    className="w-full bg-blue-600 text-white font-black py-2 rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Detalles Factura Cliente (Tienda) */}
+            {isDetalleFacturaClienteOpen && selectedFacturaCliente && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsDetalleFacturaClienteOpen(false)}></div>
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl z-10 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-blue-100 flex justify-between items-center bg-blue-50">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-slate-900">Factura #{selectedFacturaCliente.numero_factura}</h3>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 block mt-1">
+                                    Cliente: {selectedFacturaCliente.nombre_cliente}
+                                </span>
+                            </div>
+                            <button onClick={() => setIsDetalleFacturaClienteOpen(false)} className="w-10 h-10 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 transition-colors">✕</button>
+                        </div>
+                        <div className="overflow-y-auto flex-1">
+                            {loadingDetallesFactura ? (
+                                <p className="text-center text-slate-400 italic py-12">Cargando detalles...</p>
+                            ) : detallesFacturaCliente.length === 0 ? (
+                                <p className="text-center text-slate-400 italic py-12">No hay detalles para esta factura.</p>
+                            ) : (
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-blue-50 border-b border-blue-100">
+                                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-widest">Producto</th>
+                                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-widest text-center">Cantidad</th>
+                                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-widest text-right">Precio Unit.</th>
+                                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-widest text-center">Impuesto</th>
+                                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-widest text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {detallesFacturaCliente.map(d => (
+                                            <tr key={d.id} className="border-b border-blue-50 hover:bg-blue-50/50 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-bold text-slate-800">{d.nombre_producto}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 text-center">{d.cantidad}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 text-right">${Number(d.precio_unitario).toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 text-center">{Number(d.impuesto_aplicado * 100).toFixed(0)}%</td>
+                                                <td className="px-6 py-4 text-sm font-bold text-blue-700 text-right">
+                                                    <div>${Number(d.subtotal).toFixed(2)}</div>
+                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(d.subtotal) * tasa).toFixed(2)}</div>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                        <div className="p-6 border-t border-blue-100 bg-blue-50 flex justify-between items-center">
+                            <span className="text-xs font-black uppercase tracking-widest text-blue-500">Total Factura</span>
+                            <div className="text-right">
+                                <div className="text-2xl font-black text-slate-900">${Number(selectedFacturaCliente.total).toFixed(2)}</div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedFacturaCliente.total) * tasa).toFixed(2)}</div>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Generar Orden Tienda */}
+            {isOrdenTiendaModalOpen && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOrdenTiendaModalOpen(false)}></div>
+                    <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-2xl z-10 overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 className="text-lg font-black uppercase tracking-tight">{editOrdenId ? `Editar Orden #${editOrdenId}` : 'Generar Orden de Tienda'}</h3>
+                            <button onClick={() => setIsOrdenTiendaModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600">✕</button>
+                        </div>
+
+                        {/* Items */}
+                        <div className="p-6 overflow-y-auto flex-1 space-y-3">
+                            {/* Cliente */}
+                            <div className="mb-4">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">Cliente</label>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        value={ordenClienteId}
+                                        onChange={e => setOrdenClienteId(e.target.value)}
+                                        className="flex-1 p-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">-- Seleccionar cliente --</option>
+                                        {clientes.map(c => (
+                                            <option key={c.id} value={c.id}>{c.nombre}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => handleNuevoCliente('ordenTienda')}
+                                        className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors font-black text-lg leading-none"
+                                        title="Crear nuevo cliente"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Column headers */}
+                            <div className="grid grid-cols-[1fr_80px_110px_110px_32px] gap-3 px-1">
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Producto</span>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Cant.</span>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Precio</span>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Subtotal</span>
+                                <span></span>
+                            </div>
+
+                            {ordenItems.map((item, index) => {
+                                const subtotal = item.precio * item.cantidad;
+                                return (
+                                    <div key={index} className="grid grid-cols-[1fr_80px_110px_110px_32px] gap-3 items-center">
+                                        {/* Producto */}
+                                        <select
+                                            value={item.producto_id}
+                                            onChange={e => handleOrdenProductoChange(index, e.target.value)}
+                                            className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="">-- Seleccionar --</option>
+                                            {productosLista.map(p => (
+                                                <option key={p.id} value={p.id}>{p.nombre}</option>
+                                            ))}
+                                        </select>
+
+                                        {/* Cantidad */}
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={item.cantidad}
+                                            onChange={e => handleOrdenCantidadChange(index, e.target.value)}
+                                            className="w-full p-2 border border-slate-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+
+                                        {/* Precio */}
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={`$${Number(item.precio).toFixed(2)}`}
+                                            className="w-full p-2 border border-slate-100 rounded-lg text-sm text-right bg-slate-50 text-slate-500 cursor-not-allowed"
+                                        />
+
+                                        {/* Subtotal */}
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={`$${subtotal.toFixed(2)}`}
+                                            className="w-full p-2 border border-slate-100 rounded-lg text-sm text-right bg-slate-50 font-bold text-blue-600 cursor-not-allowed"
+                                        />
+
+                                        {/* Eliminar */}
+                                        <button
+                                            onClick={() => handleEliminarItem(index)}
+                                            disabled={ordenItems.length === 1}
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                                            title="Eliminar fila"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                );
+                            })}
+
+                            {/* Botón agregar producto */}
+                            <button
+                                onClick={handleAgregarItem}
+                                className="mt-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors"
+                            >
+                                <span className="w-6 h-6 rounded-full border-2 border-blue-600 flex items-center justify-center font-black text-base leading-none">+</span>
+                                Agregar producto
+                            </button>
+                        </div>
+
+                        {/* Footer con total */}
+                        <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <div>
+                                <div className="text-xs font-black uppercase tracking-widest text-slate-500">Total Orden</div>
+                                <div className="text-2xl font-black text-slate-900">
+                                    ${ordenItems.reduce((acc, item) => acc + item.precio * item.cantidad, 0).toFixed(2)}
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleGenerarOrden}
+                                className="text-sm font-black uppercase tracking-widest bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                            >
+                                {editOrdenId ? 'Guardar' : 'Generar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Editar Cliente */}
+            {isClienteModalOpen && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsClienteModalOpen(false)}></div>
+                    <div className="bg-white rounded-[1rem] shadow-2xl w-full max-w-md z-10 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="text-lg font-black">{selectedCliente ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
+                            <button onClick={() => setIsClienteModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center">✕</button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Nombre</label>
+                                <input
+                                    type="text"
+                                    value={clienteForm.nombre}
+                                    onChange={e => setClienteForm(f => ({ ...f, nombre: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Documento</label>
+                                <input
+                                    type="text"
+                                    value={clienteForm.documento_identidad}
+                                    onChange={e => setClienteForm(f => ({ ...f, documento_identidad: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Teléfono</label>
+                                <input
+                                    type="text"
+                                    value={clienteForm.telefono}
+                                    onChange={e => setClienteForm(f => ({ ...f, telefono: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Dirección</label>
+                                <input
+                                    type="text"
+                                    value={clienteForm.direccion}
+                                    onChange={e => setClienteForm(f => ({ ...f, direccion: e.target.value }))}
+                                    className="w-full p-2 border border-slate-200 rounded-md text-sm"
+                                />
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    onClick={handleGuardarCliente}
                                     className="w-full bg-blue-600 text-white font-black py-2 rounded-md hover:bg-blue-700 transition-colors"
                                 >
                                     Guardar
