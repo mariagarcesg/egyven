@@ -31,6 +31,8 @@ const FacturacionView = () => {
     const [selectedOrden, setSelectedOrden] = useState(null);
     const [detalles, setDetalles] = useState([]);
     const [loadingDetalles, setLoadingDetalles] = useState(false);
+    const [localCantidades, setLocalCantidades] = useState({});
+    const [stockMap, setStockMap] = useState({});
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState(null);
     const { showNotification } = useCart();
@@ -127,9 +129,20 @@ const FacturacionView = () => {
         setIsModalOpen(true);
         setLoadingDetalles(true);
         try {
-            const res = await fetch(`http://localhost:5000/api/ordenes/${orden.id}/detalles`);
-            const data = await res.json();
-            setDetalles(Array.isArray(data) ? data : []);
+            const [resDetalles, resProductos] = await Promise.all([
+                fetch(`http://localhost:5000/api/ordenes/${orden.id}/detalles`),
+                fetch('http://localhost:5000/api/productos')
+            ]);
+            const items = await resDetalles.json();
+            const prods = await resProductos.json();
+            const data = Array.isArray(items) ? items : [];
+            setDetalles(data);
+            const cantObj = {};
+            data.forEach(d => { cantObj[d.id] = d.cantidad; });
+            setLocalCantidades(cantObj);
+            const sMap = {};
+            (Array.isArray(prods) ? prods : []).forEach(p => { sMap[p.id] = p.stock_actual; });
+            setStockMap(sMap);
         } catch (error) {
             console.error('Error al obtener detalles:', error);
         } finally {
@@ -211,30 +224,108 @@ const FacturacionView = () => {
             setLoading(false);
         }
     };
-    // Modificar la cantidad de un detalle de orden
-    const handleModificarDetalle = async (detalleId) => {
-        const nuevaCantidadStr = window.prompt('Ingrese la nueva cantidad (mínimo 1):', '1');
-        const nuevaCantidad = parseInt(nuevaCantidadStr, 10);
-        if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
-            return; // No procede si es inválido
-        }
+    const handleCantidadChange = async (detalleId, productoId, nuevaCantidad) => {
+        const stock = stockMap[productoId] ?? Infinity;
+        const clamped = Math.min(Math.max(1, nuevaCantidad), stock);
+        setLocalCantidades(prev => ({ ...prev, [detalleId]: clamped }));
         try {
-            const res = await fetch(`http://localhost:5000/api/ordenes/detalle/${detalleId}`, {
+            await fetch(`http://localhost:5000/api/ordenes/detalle/${detalleId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cantidad: nuevaCantidad })
+                body: JSON.stringify({ cantidad: clamped })
             });
-            if (!res.ok) {
-                const err = await res.json();
-                console.error('Error al modificar detalle:', err);
-                return;
-            }
-            // Si la modal está abierta, refrescar los detalles de la orden actual
-            if (selectedOrden) {
-                await handleVerDetalles(selectedOrden);
-            }
+            setDetalles(prev => prev.map(d => d.id === detalleId ? { ...d, cantidad: clamped, subtotal: clamped * d.precio_unitario } : d));
         } catch (error) {
-            console.error('Error al modificar detalle de orden:', error);
+            console.error('Error al modificar detalle:', error);
+        }
+    };
+
+    const handleImprimirFactura = async (factura) => {
+        try {
+            const [resUsuario, resDetalles] = await Promise.all([
+                fetch(`http://localhost:5000/api/usuarios/${factura.id_usuario}`),
+                fetch(`http://localhost:5000/api/facturas/${factura.id}/detalles`)
+            ]);
+            const cliente = await resUsuario.json();
+            const detalles = await resDetalles.json();
+
+            const filas = (Array.isArray(detalles) ? detalles : []).map(d => `
+                <tr>
+                    <td>${d.nombre_producto || '-'}</td>
+                    <td style="text-align:center">${d.cantidad}</td>
+                    <td style="text-align:right">$${Number(d.precio_unitario).toFixed(2)}</td>
+                    <td style="text-align:right">$${Number(d.subtotal || d.cantidad * d.precio_unitario).toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Factura #${factura.id}</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; margin: 40px; }
+        h1 { font-size: 22px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; margin: 0; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 2px solid #2563eb; padding-bottom: 16px; }
+        .brand span { color: #2563eb; }
+        .meta { text-align: right; font-size: 11px; color: #64748b; }
+        .meta strong { display: block; font-size: 14px; color: #1e293b; }
+        .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 20px 0 6px; }
+        .client-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
+        .client-grid div { font-size: 12px; } .client-grid span { color: #64748b; font-size: 10px; display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        thead tr { background: #f1f5f9; }
+        th { text-align: left; padding: 8px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+        .footer { margin-top: 24px; border-top: 2px solid #e2e8f0; padding-top: 16px; text-align: right; }
+        .footer .total { font-size: 20px; font-weight: 900; color: #2563eb; }
+        .footer .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; }
+        @media print { body { margin: 20px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand"><h1>TECNO<span>VA</span></h1><div style="font-size:10px;color:#64748b;margin-top:4px">Comprobante de Pago</div></div>
+        <div class="meta"><strong>Factura #${factura.id}</strong><span>Fecha: ${new Date(factura.fecha_venta).toLocaleDateString('es-VE')}</span></div>
+    </div>
+
+    <div class="section-title">Datos del Cliente</div>
+    <div class="client-grid">
+        <div><span>Cédula / RIF</span>${cliente.cedula_rif || '-'}</div>
+        <div><span>Nombre</span>${cliente.nombre || '-'} ${cliente.apellido || ''}</div>
+        <div><span>Teléfono</span>${cliente.telefono || '-'}</div>
+        <div><span>Dirección</span>${cliente.direccion || '-'}</div>
+    </div>
+
+    <div class="section-title">Detalle de Productos</div>
+    <table>
+        <thead><tr><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
+        <tbody>${filas}</tbody>
+    </table>
+
+    <div class="footer">
+        <div class="label">Total Factura</div>
+        <div class="total">$${Number(factura.total).toFixed(2)}</div>
+    </div>
+    <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`;
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+
+            const res = await fetch(`http://localhost:5000/api/facturas/${factura.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estatus_id: 5 })
+            });
+            if (res.ok) {
+                await fetchFacturas();
+            }
+        } catch (err) {
+            console.error('Error al generar PDF:', err);
+            showNotification('Error al generar la factura', 'error');
         }
     };
 
@@ -386,6 +477,7 @@ const FacturacionView = () => {
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha Venta</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Total</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pagado</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Pendiente</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Acciones</th>
                                     </tr>
@@ -406,12 +498,12 @@ const FacturacionView = () => {
     ) : (
         facturas.map((factura) => (
             <tr key={factura.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 text-sm font-bold text-slate-700">
+                <td className="px-6 py-4 text-sm font-bold text-slate-700 bg-slate-100">
                     #{factura.id}
                 </td>
-                
+
                 {/* MOSTRAR NOMBRE DEL CLIENTE/USUARIO */}
-                <td className="px-6 py-4 text-sm font-bold text-slate-900 bg-blue-100">
+                <td className="px-6 py-4 text-sm font-bold text-slate-900 bg-slate-100">
                     {factura.nombre_cliente || "Usuario no encontrado"}
                 </td>
 
@@ -428,6 +520,10 @@ const FacturacionView = () => {
                     <div>${Number(factura.total_pagado).toFixed(2)}</div>
                     {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(factura.total_pagado) * tasa).toFixed(2)}</div>}
                 </td>
+                <td className={`px-6 py-4 text-sm font-bold ${(Number(factura.total) - Number(factura.total_pagado)) === 0 ? 'text-slate-400 bg-slate-100' : 'text-orange-600 bg-orange-50'}`}>
+                    <div>${(Number(factura.total) - Number(factura.total_pagado)).toFixed(2)}</div>
+                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {((Number(factura.total) - Number(factura.total_pagado)) * tasa).toFixed(2)}</div>}
+                </td>
                 <td className="px-6 py-4">{getStatusBadge(factura.estatus_id)}</td>
                 <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -441,11 +537,9 @@ const FacturacionView = () => {
                         <button
                             disabled={factura.estatus_id === 5}
                             onClick={() => {
-                                if (factura.estatus_id === 5) return; // inhabilitado cuando Finalizado
+                                if (factura.estatus_id === 5) return;
                                 if (factura.estatus_id === 3) {
-                                    // Ya pagada -> mostrar modal de finalizar
-                                    setFacturaToFinalize(factura);
-                                    setIsFinalizeModalOpen(true);
+                                    handleImprimirFactura(factura);
                                     return;
                                 }
                                 setPagoFactura(factura);
@@ -456,10 +550,10 @@ const FacturacionView = () => {
                                 setPendienteCalculado(null);
                                 setIsPagoModalOpen(true);
                             }}
-                            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-colors border ${factura.estatus_id === 5 ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : 'text-white bg-green-600 hover:bg-green-700 border-green-700'}`}
-                            title={factura.estatus_id === 5 ? 'Factura finalizada' : 'Registrar pago'}
+                            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-colors border ${factura.estatus_id === 5 ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed' : factura.estatus_id === 3 ? 'text-white bg-blue-600 hover:bg-blue-700 border-blue-700' : 'text-white bg-green-600 hover:bg-green-700 border-green-700'}`}
+                            title={factura.estatus_id === 5 ? 'Factura finalizada' : factura.estatus_id === 3 ? 'Imprimir factura' : 'Registrar pago'}
                         >
-                            Pago
+                            {factura.estatus_id === 3 ? 'Imprimir' : 'Pago'}
                         </button>
                     </div>
                 </td>
@@ -510,7 +604,17 @@ const FacturacionView = () => {
                                                 <tr key={index} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                                     <td className="px-6 py-4 text-sm font-bold text-slate-700">{tasa.moneda_origen}</td>
                                                     <td className="px-6 py-4 text-sm font-bold text-slate-700">{tasa.moneda_destino}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">{Number(tasa.tasa_cambio).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-blue-600">
+                                                    <span className="flex items-center gap-1">
+                                                        {Number(tasa.tasa_cambio).toFixed(2)}
+                                                        {index > 0 && Number(tasa.tasa_cambio) > Number(tasas[index - 1].tasa_cambio) && (
+                                                            <span className="text-green-500 text-base leading-none">↑</span>
+                                                        )}
+                                                        {index > 0 && Number(tasa.tasa_cambio) < Number(tasas[index - 1].tasa_cambio) && (
+                                                            <span className="text-red-500 text-base leading-none">↓</span>
+                                                        )}
+                                                    </span>
+                                                </td>
                                                     <td className="px-6 py-4 text-sm text-slate-500">{new Date(tasa.fecha_registro).toLocaleString()}</td>
                                                 </tr>
                                             ))
@@ -722,17 +826,26 @@ const FacturacionView = () => {
                                                 <h4 className="font-bold text-slate-800">{item.nombre}</h4>
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">ID Producto: {item.id_producto}</span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleModificarDetalle(item.id)}
-                                                    className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors border border-slate-200"
-                                                >
-                                                    Modificar
-                                                </button>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                                                    <button
+                                                        onClick={() => handleCantidadChange(item.id, item.id_producto, (localCantidades[item.id] ?? item.cantidad) - 1)}
+                                                        className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm transition-colors disabled:opacity-30"
+                                                        disabled={(localCantidades[item.id] ?? item.cantidad) <= 1}
+                                                    >−</button>
+                                                    <span className="px-3 py-1 text-sm font-bold text-slate-800 min-w-[2rem] text-center border-x border-slate-200">
+                                                        {localCantidades[item.id] ?? item.cantidad}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleCantidadChange(item.id, item.id_producto, (localCantidades[item.id] ?? item.cantidad) + 1)}
+                                                        className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm transition-colors disabled:opacity-30"
+                                                        disabled={(localCantidades[item.id] ?? item.cantidad) >= (stockMap[item.id_producto] ?? Infinity)}
+                                                    >+</button>
+                                                </div>
                                                 <div className="text-right">
-                                                    <div className="text-slate-500 text-xs font-bold mb-1">{item.cantidad} x ${Number(item.precio_unitario).toFixed(2)}</div>
-                                                    <div className="text-blue-600 font-black">${Number(item.subtotal || (item.cantidad * item.precio_unitario)).toFixed(2)}</div>
-                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(item.subtotal || (item.cantidad * item.precio_unitario)) * tasa).toFixed(2)}</div>}
+                                                    <div className="text-slate-500 text-xs font-bold mb-1">x ${Number(item.precio_unitario).toFixed(2)}</div>
+                                                    <div className="text-blue-600 font-black">${((localCantidades[item.id] ?? item.cantidad) * Number(item.precio_unitario)).toFixed(2)}</div>
+                                                    {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {((localCantidades[item.id] ?? item.cantidad) * Number(item.precio_unitario) * tasa).toFixed(2)}</div>}
                                                 </div>
                                             </div>
                                         </div>
@@ -741,10 +854,22 @@ const FacturacionView = () => {
                             )}
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Orden</span>
+                            <button
+                                onClick={async () => {
+                                    setIsModalOpen(false);
+                                    await fetchOrdenes();
+                                    showNotification('Orden actualizada correctamente', 'success');
+                                }}
+                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors shadow-sm"
+                            >
+                                Guardar
+                            </button>
                             <div className="text-right">
-                                <div className="text-2xl font-black italic text-slate-900">${Number(selectedOrden.total).toFixed(2)}</div>
-                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(selectedOrden.total) * tasa).toFixed(2)}</div>}
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-500 block mb-1">Total Orden</span>
+                                <div className="text-2xl font-black italic text-slate-900">
+                                    ${detalles.reduce((acc, d) => acc + (localCantidades[d.id] ?? d.cantidad) * Number(d.precio_unitario), 0).toFixed(2)}
+                                </div>
+                                {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(detalles.reduce((acc, d) => acc + (localCantidades[d.id] ?? d.cantidad) * Number(d.precio_unitario), 0) * tasa).toFixed(2)}</div>}
                             </div>
                         </div>
                     </div>

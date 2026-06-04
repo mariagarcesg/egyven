@@ -316,7 +316,7 @@ const ComparadorView = () => {
                         </td>
                         <td className="px-4 py-3 font-bold text-white">
                           <div>${Number(p.precio_competencia).toFixed(2)}</div>
-                          {tasa && <div className="text-xs text-slate-400 mt-0.5">Bs. {(Number(p.precio_competencia) * tasa).toFixed(2)}</div>}
+                          {tasa && <div className="text-xs text-black mt-0.5 font-semibold">Bs. {(Number(p.precio_competencia) * tasa).toFixed(2)}</div>}
                         </td>
                         <td className="px-4 py-3">{renderComparison(producto.precio_venta, p.precio_competencia)}</td>
                         <td className="px-4 py-3 text-slate-700 text-xs">{p.ultima_actualizacion ? new Date(p.ultima_actualizacion).toLocaleString() : '-'}</td>
